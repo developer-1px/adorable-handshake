@@ -3,6 +3,9 @@
   "api": "1.0.0",
   "main": "code.js",
   "editorType": ["figma", "dev"],
-  "capabilities": ["inspect"],
-  "ui": "index.html"
+  "capabilities": ["inspect", "codegen"],
+  "ui": "index.html",
+  "codegenLanguages": [
+    {"label": "AdorableCSS", "value": "AdorableCSS"}
+  ]
 }

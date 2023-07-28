@@ -8,8 +8,6 @@ const CLASS_NAME = isReact ? "className" : "class"
 const COMMENT_START = isReact ? "{/*" : "<!--"
 const COMMENT_END = isReact ? "*/}" : "-->"
 
-figma.showUI(__html__, {width: 300, height: 300})
-
 const traverse = (node, callback) => {
   callback(node)
   if (node.children && node.children.length) {
@@ -17,13 +15,13 @@ const traverse = (node, callback) => {
   }
 }
 
-const createClassBuilder = (cls:string[]) => {
+const createClassBuilder = (cls:string[] = []) => {
   const addClass = (prop, value?) => cls.push(`${prop}${value ? "(" + value + ")" : ""}`)
   return {addClass, cls}
 }
 
 const generateChild = async (depth, children, callback) => {
-  const contents = await Promise.all((children || []).map(params => generateCode(params, depth)))
+  const contents = await Promise.all((children || []).map(params => generateCode(params, depth + 1)))
   const content = contents.join("")
   return callback(content)
 }
@@ -33,7 +31,7 @@ const wrapInstance = (node, code) => {
   const mainComponentSet = (mainComponent.parent && mainComponent.parent?.type === "COMPONENT_SET") ? mainComponent.parent : mainComponent
 
   const name = capitalize(mainComponentSet.name.trim().replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))
-  return `\n${COMMENT_START} <${name}/> ${COMMENT_END}\n${code}\n${COMMENT_START} </${name}> ${COMMENT_END}\n`
+  return `\n${COMMENT_START} <${name}> ${COMMENT_END}\n${code}\n${COMMENT_START} </${name}> ${COMMENT_END}\n`
 }
 
 const generateGroup = async (node:GroupNode, depth) => {
@@ -46,7 +44,7 @@ const generateGroup = async (node:GroupNode, depth) => {
 
 const generateComponentSet = async (node, depth) => {
   const children = await generateChild(depth, node.children, content => content)
-  return `<div ${CLASS_NAME}="vbox gap(20)">${children}</div>`
+  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>\n`
 }
 
 
@@ -59,7 +57,7 @@ const addClassWidth = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingHorizontal, width, minWidth, maxWidth} = node
 
   if (layoutSizingHorizontal === "HUG") {}
-  else if (node?.parent?.layoutMode === "VERTICAL" && layoutSizingHorizontal === "FILL") addClass("w", "fill")
+  else if (layoutSizingHorizontal === "FILL") addClass("w", "fill")
   else if (layoutSizingHorizontal === "FIXED") addClass("w", makeInt(width))
 
   if (minWidth !== null || maxWidth !== null) {
@@ -70,10 +68,17 @@ const addClassWidth = (node:FrameNode, addClass:AddClass) => {
 }
 
 const addClassHeight = (node:FrameNode, addClass:AddClass) => {
-  const {layoutSizingVertical, height} = node
+  const {layoutSizingVertical, height, minHeight, maxHeight} = node
+
   if (layoutSizingVertical === "HUG") {}
-  else if (node?.parent?.layoutMode === "HORIZONTAL" && layoutSizingVertical === "FILL") addClass("h", "fill")
+  else if (layoutSizingVertical === "FILL") addClass("h", "fill")
   else if (layoutSizingVertical === "FIXED") addClass("h", makeInt(height))
+
+  if (minHeight !== null || maxHeight !== null) {
+    const _minHeight = minHeight !== null ? makeInt(minHeight) : ""
+    const _maxHeight = maxHeight !== null ? makeInt(maxHeight) : ""
+    addClass("h", _minHeight + "~" + _maxHeight)
+  }
 }
 
 const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => {
@@ -122,12 +127,6 @@ const addEffectStyle = (node, addClass:AddClass) => {
   }
 }
 
-
-const addClassFlexGrow = (node, addClass:AddClass) => {
-  const {layoutGrow} = node
-  if (layoutGrow > 0) layoutGrow === 1 ? addClass("flex") : addClass(`flex(${layoutGrow})`)
-}
-
 const everyChildrenHasStretchVbox = (node) => node.children?.every(c => c.layoutSizingHorizontal === "FILL")
 
 const isAbsoluteLayout = (node) => {
@@ -136,11 +135,15 @@ const isAbsoluteLayout = (node) => {
     return false
   }
 
-  if (node.parent?.layoutMode && node.parent?.layoutMode !== "NONE") {
-    return false
+  if (node.layoutPositioning === "ABSOLUTE") {
+    return true
   }
 
-  return true
+  if (!node.parent.layoutMode || node.parent.layoutMode === "NONE") {
+    return true
+  }
+
+  return false
 }
 
 const addClassPosition = (node:SceneNode, addClass:AddClass) => {
@@ -175,7 +178,6 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
     layoutWrap,
     primaryAxisAlignItems,
     counterAxisAlignItems,
-    width, height
   } = node
 
   if (layoutMode !== "NONE" && hasChildren) {
@@ -183,7 +185,6 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
     // hbox
     if (layoutMode === "HORIZONTAL") {
       if (primaryAxisAlignItems === "CENTER" && counterAxisAlignItems === "CENTER") {
-        if (numChildren > 1) addClass("hbox")
         addClass("pack")
       }
       else {
@@ -202,8 +203,7 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
     // vbox
     else if (layoutMode === "VERTICAL") {
       if (primaryAxisAlignItems === "CENTER" && counterAxisAlignItems === "CENTER") {
-        if (numChildren > 1) addClass("vbox")
-        addClass("pack")
+        addClass("vpack")
       }
       else {
         const value:string[] = []
@@ -232,11 +232,11 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
       else if (node.itemSpacing !== 0) {
         const {itemSpacing} = node
 
-        if (layoutWrap === "WRAP") {
-          addClass("gap", itemSpacing)
+        if (itemSpacing < 0) {
+          layoutMode === "HORIZONTAL" ? addClass("hgap", itemSpacing) : addClass("vgap", itemSpacing)
         }
         else {
-          layoutMode === "HORIZONTAL" ? addClass("hgap", itemSpacing) : addClass("vgap", itemSpacing)
+          addClass("gap", itemSpacing)
         }
       }
     }
@@ -262,115 +262,89 @@ const addClassBackground = (node:FrameNode, addClass:AddClass) => {
   }
 }
 
+const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
+  if (!node.children) return
+  const numChildren = node.children.filter(child => child.visible).length
+  const hasChildren = numChildren > 0
+  if (hasChildren && node.clipsContent) addClass("clip")
+  else if (node.findOne(child => child.type === "TEXT" && child.textTruncation === "ENDING")) addClass("clip")
+}
+
 const generateFrame = async (node:FrameNode, depth:number) => {
 
-  const {addClass, cls} = createClassBuilder([])
+  const {addClass, cls} = createClassBuilder()
 
   // Position
   addClassPosition(node, addClass)
 
-
-  // Size: width / fill
+  // Size: width,height: hug, fixed, fill
   addClassWidth(node, addClass)
-
-  // Size: height / fill
   addClassHeight(node, addClass)
 
-
-  // AutoLayout hbox / vbox
+  // AutoLayout: hbox / vbox
   addClassFlexbox(node, addClass)
 
-
-  // bg
+  // Fill: Backgrounds
   addClassBackground(node, addClass)
-
-  // Border Radius
-  addClassBorderRadius(node, addClass)
 
   // Border
   addClassBorder(node, addClass)
 
-  // effectStyle
+  // Border Radius
+  addClassBorderRadius(node, addClass)
+
+  // clip: Overflow
+  addClassOverflow(node, addClass)
+
+  // Effects: Style
   addEffectStyle(node, addClass)
 
-  // opacity
+  // Layer: opacity
   addOpacity(node, addClass)
 
-  // overflow
-  const numChildren = node.children?.filter(child => child.visible).length
-  const hasChildren = numChildren > 0
-  if (hasChildren && node.clipsContent) addClass("clip")
-  else if (node.findOne(child => child.type === "TEXT" && child.textTruncation === "ENDING")) addClass("clip")
-
-  // Dev Log
+  // @TODO: First on Top
   if (node.itemReverseZIndex) {
     addClass("itemReverseZIndex")
   }
 
+  // Dev Log
   const className = cls.join(" ")
-  return await generateChild(depth + 1, node.children, content => `<div ${CLASS_NAME}="${className}">\n${content}</div>`)
+  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}">\n${content}\n</div>\n`)
 }
 
-const generateText = async (node:TextNode) => {
-  const cls = []
-  const {addClass} = createClassBuilder(cls)
+const addClassFont = (node:TextNode, addClass:AddClass) => {
+  if (node.fontSize) {
+    // font( font-size / line-height / letter-spacing )
+    const font = [node.fontSize]
 
-  const segments = node.getStyledTextSegments([
-    "fontSize",
-    "fontName",
-    "fontWeight",
-    "textDecoration",
-    "textCase",
-    "lineHeight",
-    "letterSpacing",
-    "fills",
-    "textStyleId",
-    "fillStyleId",
-    "listOptions",
-    "indentation",
-    "hyperlink",
-    "openTypeFeatures"
-  ])
+    // line-height
+    if (node.lineHeight?.value && node.lineHeight?.unit !== "AUTO") {
+      font.push(unitValue(node.lineHeight))
+    }
 
-  console.log({segments})
+    // letter-spacing
+    if (node.letterSpacing?.value) {
+      if (font.length === 1) font.push("-")
+      font.push(unitValue(node.letterSpacing))
+    }
 
-  // Constraints
-  addClassPosition(node, addClass)
-
-  const {textAutoResize, textTruncation, maxLines, width, height} = node
-  switch (textAutoResize) {
-    case "WIDTH_AND_HEIGHT":
-      break
-
-    case "HEIGHT":
-      addClass("w", makeInt(width))
-      break
-
-    case "NONE":
-      addClass("w", makeInt(width))
-      addClass("h", makeInt(height))
-      break
+    addClass("font", font.filter(Boolean).map(v => v.toString()).join("/"))
   }
+  else {
+    // line-height
+    if (node.lineHeight?.value && node.lineHeight?.unit !== "AUTO") {
+      addClass("line-height", unitValue(node.lineHeight))
+    }
 
-  // font( font-size / line-height / letter-spacing )
-  const font = [node.fontSize]
-
-  // line-height
-  if (node.lineHeight?.value && node.lineHeight?.unit !== "AUTO") {
-    font.push(unitValue(node.lineHeight))
+    // letter-spacing
+    if (node.letterSpacing?.value) {
+      addClass("letter-spacing", unitValue(node.letterSpacing))
+    }
   }
-
-  // letter-spacing
-  if (node.letterSpacing?.value) {
-    if (font.length === 1) font.push("-")
-    font.push(unitValue(node.letterSpacing))
-  }
-
-  addClass("font", font.filter(Boolean).map(v => v.toString()).join("/"))
 
   // font-weight
-  if (node.fontName?.style) {
-    const fontStyleName = node.fontName?.style.toLowerCase()
+  if (node.fontWeight) {
+    const fontStyleName = node.fontWeight.toLowerCase()
     switch (fontStyleName) {
       case "regular":
         break
@@ -386,22 +360,107 @@ const generateText = async (node:TextNode) => {
     }
   }
 
+  // text-decoration
+  switch (node.textDecoration) {
+    case "UNDERLINE": {
+      addClass("underline")
+      break
+    }
+    case "STRIKETHROUGH": {
+      addClass("line-through")
+      break
+    }
+  }
+
   // font-family
-  const fontFamilyName = node.fontName?.family?.replace(/\s/g, "-")
+  const fontFamilyName = node.fontFamily?.replace(/\s/g, "-")
   if (fontFamilyName) {
     addClass(fontFamilyName)
   }
 
   // color
-  const fill = node.fills[0]
-  if (fill?.visible && fill?.type === "SOLID") {
+  const fill = node.fills?.find(fill => fill?.visible && fill?.type === "SOLID")
+  if (fill) {
     addClass("c", makeColor(fill.color, fill.opacity))
   }
 
-  // opacity
-  if (node.opacity !== 1) {
-    addClass("opacity", makeNumber(node.opacity))
+  // textCase
+  switch (node.textCase) {
+    case "UPPER": {
+      addClass("uppercase");
+      break
+    }
+    case "LOWER": {
+      addClass("lowercase")
+      break
+    }
+    case "TITLE": {
+      addClass("capitalize")
+      break
+    }
+    case "SMALL_CAPS": {
+      addClass("small-caps")
+      break
+    }
+    case "SMALL_CAPS_FORCED": {
+      addClass("capitalize small-caps")
+      break
+    }
   }
+}
+
+const generateText = async (node:TextNode) => {
+  const {addClass, cls} = createClassBuilder()
+
+  // Position
+  addClassPosition(node, addClass)
+
+  // Size
+  const {textAutoResize, textTruncation, maxLines, width, height} = node
+  switch (textAutoResize) {
+    case "WIDTH_AND_HEIGHT":
+      break
+
+    case "HEIGHT":
+      addClass("w", makeInt(width))
+      break
+
+    case "NONE":
+      addClass("w", makeInt(width))
+      addClass("h", makeInt(height))
+      break
+  }
+
+
+  // Text Segment
+  // @TODO: 세그먼트에서 공통은 위로 보내고 다른 점만 span에 class로 넣기 기능
+  const segments = node.getStyledTextSegments([
+    "fontSize",
+    "fontName",
+    "fontWeight",
+    "textDecoration",
+    "textCase",
+    "lineHeight",
+    "letterSpacing",
+    "fills",
+    "textStyleId",
+    "fillStyleId",
+    "listOptions",
+    "indentation",
+    "hyperlink",
+    "openTypeFeatures"
+  ]).map(segment => ({...segment, fontFamily: segment.fontName?.family, fontWeight: segment.fontName?.style}))
+
+  // get common segments style
+  const commonFontStyle = segments.reduce((prev, curr) => {
+    const style = {}
+    Object.keys(prev).forEach(key => {
+      if (JSON.stringify(prev[key]) === JSON.stringify(curr[key])) style[key] = prev[key]
+    })
+    return style
+  })
+
+  addClassFont(commonFontStyle, addClass)
 
   // text-align
   const HORIZONTAL_ALIGN = {
@@ -433,30 +492,6 @@ const generateText = async (node:TextNode) => {
     }
   }
 
-  // textCase
-  switch (node.textCase) {
-    case "UPPER": {
-      addClass("uppercase")
-      break
-    }
-    case "LOWER": {
-      addClass("lowercase")
-      break
-    }
-    case "TITLE": {
-      addClass("capitalize")
-      break
-    }
-    case "SMALL_CAPS": {
-      addClass("small-caps")
-      break
-    }
-    case "SMALL_CAPS_FORCED": {
-      addClass("capitalize small-caps")
-      break
-    }
-  }
-
   // textTruncation
   if (textTruncation === "ENDING") {
     if (maxLines > 1) {
@@ -467,12 +502,26 @@ const generateText = async (node:TextNode) => {
     }
   }
 
+  // opacity
+  if (node.opacity !== 1) {
+    addClass("opacity", makeNumber(node.opacity))
+  }
+
+
+  const textContent = segments.length === 1 ? nl2br(node.characters) : segments.map(segment => {
+    const {addClass, cls} = createClassBuilder()
+    // remove common style
+    Object.keys(commonFontStyle).forEach(key => {
+      if (JSON.stringify(commonFontStyle[key]) === JSON.stringify(segment[key])) delete segment[key]
+    })
+    addClassFont(segment, addClass)
+
+    const className = cls.join(" ")
+    return `<span ${CLASS_NAME}="${className}">${nl2br(segment.characters)}</span>`
+  }).join("")
+
   const className = cls.join(" ")
-  const textContent = nl2br(node.characters)
-
-  console.log("textContent: ", node.characters)
-
-  return `<div ${CLASS_NAME}="${className}">${textContent}</div>`
+  return `<div ${CLASS_NAME}="${className}">${textContent}</div>\n`
 }
 
 
@@ -509,7 +558,7 @@ const generateShape = async (node) => {
   addOpacity(node, addClass)
 
   const className = cls.join(" ")
-  return `<div ${CLASS_NAME}="${className}"></div>`
+  return `<div ${CLASS_NAME}="${className}"></div>\n`
 }
 
 
@@ -531,10 +580,10 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
 
     try {
       addClassPosition(node, addClass)
-      const content = await node.exportAsync({format: "SVG_STRING"})
+      const content = await node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
 
       if (cls.length) {
-        code = `<div ${CLASS_NAME}="${cls}">${content}</div>`
+        code = `<div ${CLASS_NAME}="${cls}">\n${content}\n</div>\n`
       }
       else {
         code = content
@@ -544,40 +593,46 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
     }
   }
   else if (node.type === "COMPONENT" || node.type === "INSTANCE") code = await generateInstance(node, depth)
-  else if (node.type === "FRAME" || node.type === "GROUP") code = await generateFrame(node as FrameNode, depth)
+  else if (node.type === "FRAME" || node.type === "GROUP" || node.type === "RECTANGLE") code = await generateFrame(node as FrameNode, depth)
   else if (node.type === "TEXT") code = await generateText(node)
-  else if (node.type === "RECTANGLE") code = await generateShape(node)
   else if (node.type === "COMPONENT_SET") code = await generateComponentSet(node, depth)
 
-  return Array(depth).fill("  ").join("") + code + "\n"
+  const space = "  "
+  return code.split("\n").map(line => space + line).join("\n")
+}
+
+const getGeneratedCode = async (node) => {
+  // 선택한 코드를
+  // const record = {}
+  //
+  // console.log("selectedNode!!: ", node)
+  // // console.log("inferredAutoLayout: ", node.inferredAutoLayout)
+  //
+  // traverse(node, (node) => {
+  //   if (node.type === "INSTANCE") {
+  //     const mainComponent = node.mainComponent
+  //     const mainComponentSet = mainComponent.parent?.type === "COMPONENT_SET" ? mainComponent.parent : mainComponent
+  //     record[node.mainComponent.id] = mainComponentSet.name
+  //   }
+  // })
+
+  return await generateCode(node, 0)
 }
 
 const generate = async () => {
   const selection = figma.currentPage.selection
   if (!selection.length) return
 
-  // 선택한 코드를
   const node = selection[0]
-  const record = {}
+  console.log("selectedNode: ", node)
 
-  console.log("selectedNode!!: ", node)
-  // console.log("inferredAutoLayout: ", node.inferredAutoLayout)
-
-  traverse(node, (node) => {
-    if (node.type === "INSTANCE") {
-      const mainComponent = node.mainComponent
-      const mainComponentSet = mainComponent.parent?.type === "COMPONENT_SET" ? mainComponent.parent : mainComponent
-      record[node.mainComponent.id] = mainComponentSet.name
-    }
-  })
-
-  const code = await generateCode(node, 0)
+  const code = await getGeneratedCode(node)
 
   // 배경색상 찾기
   const pageBackgroundColor = makeColor(figma.currentPage.backgrounds[0].color)
   const getBackgroundColor = (node:SceneNode) => node.fills?.find(fill => fill.visible && fill.type === "SOLID")
-  let it = node.parent
 
+  let it = node.parent
   let backgroundColor = pageBackgroundColor
   while (it) {
     const bg = getBackgroundColor(it)
@@ -591,13 +646,31 @@ const generate = async () => {
 
   // 피그마로 분석한 코드 전달 및 화면크기 조절 요청
   const rect = node.absoluteBoundingBox
-  figma.showUI(__html__, {
-    width: Math.floor(rect.width) || 0,
-    height: (Math.floor(rect.height) || 0) + 200
-  })
+  const width = Math.floor(rect.width) || 0
+  const height = (Math.floor(rect.height) || 0) + 200
+  figma.ui.resize(width, height)
   figma.ui.postMessage({code, backgroundColor, pageBackgroundColor})
 }
 
-generate()
-figma.on("selectionchange", generate)
-figma.on("currentpagechange", generate)
+if (figma.editorType === "figma") {
+  figma.showUI(__html__)
+  generate()
+  figma.on("selectionchange", generate)
+  figma.on("currentpagechange", generate)
+}
+
+// Make sure that we're in Dev Mode and running codegen
+if (figma.editorType === "dev" && figma.mode === "codegen") {
+  // Register a callback to the "generate" event
+  figma.codegen.on("generate", async ({node}) => {
+
+    console.log("codegen!!: ", node)
+
+    const code = await getGeneratedCode(node)
+    return [{
+      title: "HTML",
+      language: "HTML",
+      code: code,
+    }]
+  })
+}

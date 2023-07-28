@@ -15,8 +15,8 @@ devDependencies:
     specifier: ^5.0.0
     version: 5.0.0
   adorable-css:
-    specifier: 1.3.7-beta.1
-    version: 1.3.7-beta.1(typescript@5.1.6)
+    specifier: 1.3.7-beta.2
+    version: 1.3.7-beta.2(typescript@5.1.6)
   micromatch:
     specifier: ^4.0.5
     version: 4.0.5
@@ -363,8 +363,8 @@ packages:
     hasBin: true
     dev: true
 
-  /adorable-css@1.3.7-beta.1(typescript@5.1.6):
-    resolution: {integrity: sha512-F3Stx9zhzFcxDKjn7N5B2UrA3UswI8WYPaFB5aVRA2+ZY2dYY420IPCYfoAM500Rz+pFlNfrjWN09OYA+Z+j+g==}
+  /adorable-css@1.3.7-beta.2(typescript@5.1.6):
+    resolution: {integrity: sha512-afuyn8URZKbMUQVrR0zBxVpPVg4fIy773ThBcpJ/NMcSsYVp8ZHqGQkjbIvLTncoT3bjbBfAg8p1uu5231RZ3g==}
     hasBin: true
     dependencies:
       tsup: 7.1.0(typescript@5.1.6)
