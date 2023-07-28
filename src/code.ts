@@ -20,39 +20,6 @@ const createClassBuilder = (cls:string[] = []) => {
   return {addClass, cls}
 }
 
-const generateChild = async (depth, children, callback) => {
-  const contents = await Promise.all((children || []).map(params => generateCode(params, depth + 1)))
-  const content = contents.join("")
-  return callback(content)
-}
-
-const wrapInstance = (node, code) => {
-  const mainComponent = node.mainComponent || node
-  const mainComponentSet = (mainComponent.parent && mainComponent.parent?.type === "COMPONENT_SET") ? mainComponent.parent : mainComponent
-
-  const name = capitalize(mainComponentSet.name.trim().replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))
-  return `\n${COMMENT_START} <${name}> ${COMMENT_END}\n${code}\n${COMMENT_START} </${name}> ${COMMENT_END}\n`
-}
-
-const generateGroup = async (node:GroupNode, depth) => {
-  if (node.parent && node.parent.layoutMode && (node.parent.layoutMode !== "NONE")) {
-    return generateFrame(node, depth)
-  }
-
-  return await generateChild(depth, node.children, content => content)
-}
-
-const generateComponentSet = async (node, depth) => {
-  const children = await generateChild(depth, node.children, content => content)
-  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>\n`
-}
-
-
-const generateInstance = async (node, depth) => {
-  const code = await generateFrame(node, depth)
-  return wrapInstance(node, code)
-}
-
 const addClassWidth = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingHorizontal, width, minWidth, maxWidth} = node
 
@@ -120,11 +87,38 @@ const addClassBorder = (node, addClass:AddClass) => {
   }
 }
 
-const addEffectStyle = (node, addClass:AddClass) => {
-  if (node.effectStyleId) {
-    const style = figma.getStyleById(node.effectStyleId)
-    addClass(style.name.toLowerCase())
-  }
+const addEffectClass = (node:FrameNode, addClass:AddClass) => {
+  // if (node.effectStyleId) {
+  //   const style = figma.getStyleById(node.effectStyleId)
+  //   addClass(style.name.toLowerCase())
+  // }
+
+  console.log("node.effects", node.effects)
+
+  node.effects.forEach(effect => {
+    if (!effect.visible) return
+
+    switch (effect.type) {
+      case "DROP_SHADOW":
+      case "INNER_SHADOW": {
+        const {color, offset, radius, spread} = effect
+        const {x, y} = offset
+        const inset = effect.type === "INNER_SHADOW" ? "inset/" : ""
+        addClass("box-shadow", `${inset}${x}/${y}/${radius}` + (spread ? "/" + spread : "") + `/${makeColor(color, color.a)}`)
+        break
+      }
+
+      case "LAYER_BLUR": {
+        addClass("blur", Math.round(effect.radius/2))
+        break
+      }
+
+      case "BACKGROUND_BLUR": {
+        addClass("backdrop-blur", Math.round(effect.radius/2))
+        break
+      }
+    }
+  })
 }
 
 const everyChildrenHasStretchVbox = (node) => node.children?.every(c => c.layoutSizingHorizontal === "FILL")
@@ -270,6 +264,31 @@ const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
   else if (node.findOne(child => child.type === "TEXT" && child.textTruncation === "ENDING")) addClass("clip")
 }
 
+
+const wrapInstance = (node, code) => {
+  const mainComponent = node.mainComponent || node
+  const mainComponentSet = (mainComponent.parent && mainComponent.parent?.type === "COMPONENT_SET") ? mainComponent.parent : mainComponent
+
+  const name = capitalize(mainComponentSet.name.trim().replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))
+  return `\n${COMMENT_START} <${name}> ${COMMENT_END}\n${code}\n${COMMENT_START} </${name}> ${COMMENT_END}\n`
+}
+
+const generateChild = async (depth, children, callback) => {
+  const contents = await Promise.all((children || []).map(params => generateCode(params, depth + 1)))
+  const content = contents.join("")
+  return callback(content)
+}
+
+const generateComponentSet = async (node, depth) => {
+  const children = await generateChild(depth, node.children, content => content)
+  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>\n`
+}
+
+const generateInstance = async (node, depth) => {
+  const code = await generateFrame(node, depth)
+  return wrapInstance(node, code)
+}
+
 const generateFrame = async (node:FrameNode, depth:number) => {
 
   const {addClass, cls} = createClassBuilder()
@@ -297,7 +316,7 @@ const generateFrame = async (node:FrameNode, depth:number) => {
   addClassOverflow(node, addClass)
 
   // Effects: Style
-  addEffectStyle(node, addClass)
+  addEffectClass(node, addClass)
 
   // Layer: opacity
   addOpacity(node, addClass)
@@ -552,7 +571,7 @@ const generateShape = async (node) => {
   addClassBorder(node, addClass)
 
   // effectStyle
-  addEffectStyle(node, addClass)
+  addEffectClass(node, addClass)
 
   // opacity
   addOpacity(node, addClass)
@@ -654,9 +673,9 @@ const generate = async () => {
 
 if (figma.editorType === "figma") {
   figma.showUI(__html__)
-  generate()
   figma.on("selectionchange", generate)
   figma.on("currentpagechange", generate)
+  void generate()
 }
 
 // Make sure that we're in Dev Mode and running codegen
