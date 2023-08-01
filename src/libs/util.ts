@@ -80,4 +80,4 @@ export const unitValue = ({value, unit}):string => {
 export const ab2str = (buf) => String.fromCharCode.apply(null, new Uint16Array(buf))
 export const capitalize = (str:string) => str.charAt(0).toUpperCase() + str.slice(1)
 
-export const nl2br = (str:string) => str.replace(/(\r\n|\n|\r|\u2028|\u2029)/g, '<br>');
+export const nl2br = (str:string) => str.replace(/(\r\n|\n|\r|\u2028|\u2029)/g, '<br/>');

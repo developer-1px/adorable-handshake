@@ -8,6 +8,8 @@ const CLASS_NAME = isReact ? "className" : "class"
 const COMMENT_START = isReact ? "{/*" : "<!--"
 const COMMENT_END = isReact ? "*/}" : "-->"
 
+const indent = (code:string) => code ? "\n" + code.split("\n").map(line => "  " + line).join("\n") + "\n" : ""
+
 const traverse = (node, callback) => {
   callback(node)
   if (node.children && node.children.length) {
@@ -93,8 +95,6 @@ const addEffectClass = (node:FrameNode, addClass:AddClass) => {
   //   addClass(style.name.toLowerCase())
   // }
 
-  console.log("node.effects", node.effects)
-
   node.effects.forEach(effect => {
     if (!effect.visible) return
 
@@ -109,19 +109,17 @@ const addEffectClass = (node:FrameNode, addClass:AddClass) => {
       }
 
       case "LAYER_BLUR": {
-        addClass("blur", Math.round(effect.radius/2))
+        addClass("blur", Math.round(effect.radius / 2))
         break
       }
 
       case "BACKGROUND_BLUR": {
-        addClass("backdrop-blur", Math.round(effect.radius/2))
+        addClass("backdrop-blur", Math.round(effect.radius / 2))
         break
       }
     }
   })
 }
-
-const everyChildrenHasStretchVbox = (node) => node.children?.every(c => c.layoutSizingHorizontal === "FILL")
 
 const isAbsoluteLayout = (node) => {
   const selection = figma.currentPage.selection
@@ -154,12 +152,9 @@ const addClassPosition = (node:SceneNode, addClass:AddClass) => {
   }
 }
 
+const everyChildrenHasStretchVbox = (node) => node.children?.every(c => c.layoutSizingHorizontal === "FILL")
 
-// @TODO: Group에도 opacity가 있다. display:contents를 활용하는 방법을 고민해보자.
-const addOpacity = (node:SceneNode, addClass:AddClass) => {
-  // opacity
-  if (node.opacity !== 1) addClass("opacity", makeNumber(node.opacity))
-}
+const isNumber = (value) => value === +value
 
 const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
   // Flex Layout
@@ -223,7 +218,7 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
       if (primaryAxisAlignItems === "SPACE_BETWEEN") {
         addClass("space-between")
       }
-      else if (node.itemSpacing !== 0) {
+      else if (isNumber(node.itemSpacing) && node.itemSpacing !== 0) {
         const {itemSpacing} = node
 
         if (itemSpacing < 0) {
@@ -264,6 +259,13 @@ const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
   else if (node.findOne(child => child.type === "TEXT" && child.textTruncation === "ENDING")) addClass("clip")
 }
 
+// @TODO: Group에도 opacity가 있다. display:contents를 활용하는 방법을 고민해보자.
+const addOpacity = (node:SceneNode, addClass:AddClass) => {
+  // opacity
+  if (node.opacity !== 1) addClass("opacity", makeNumber(node.opacity))
+}
+
+// ----------------------------------------------------------------
 
 const wrapInstance = (node, code) => {
   const mainComponent = node.mainComponent || node
@@ -275,13 +277,13 @@ const wrapInstance = (node, code) => {
 
 const generateChild = async (depth, children, callback) => {
   const contents = await Promise.all((children || []).map(params => generateCode(params, depth + 1)))
-  const content = contents.join("")
+  const content = contents.join("\n")
   return callback(content)
 }
 
 const generateComponentSet = async (node, depth) => {
   const children = await generateChild(depth, node.children, content => content)
-  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>\n`
+  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>`
 }
 
 const generateInstance = async (node, depth) => {
@@ -328,7 +330,7 @@ const generateFrame = async (node:FrameNode, depth:number) => {
 
   // Dev Log
   const className = cls.join(" ")
-  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}">\n${content}\n</div>\n`)
+  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}">${indent(content)}</div>`)
 }
 
 const addClassFont = (node:TextNode, addClass:AddClass) => {
@@ -361,6 +363,12 @@ const addClassFont = (node:TextNode, addClass:AddClass) => {
     }
   }
 
+  // font-family
+  const fontFamilyName = node.fontFamily?.replace(/\s/g, "-")
+  if (fontFamilyName) {
+    addClass(fontFamilyName)
+  }
+
   // font-weight
   if (node.fontWeight) {
     const fontStyleName = node.fontWeight.toLowerCase()
@@ -389,12 +397,6 @@ const addClassFont = (node:TextNode, addClass:AddClass) => {
       addClass("line-through")
       break
     }
-  }
-
-  // font-family
-  const fontFamilyName = node.fontFamily?.replace(/\s/g, "-")
-  if (fontFamilyName) {
-    addClass(fontFamilyName)
   }
 
   // color
@@ -435,18 +437,18 @@ const generateText = async (node:TextNode) => {
   addClassPosition(node, addClass)
 
   // Size
-  const {textAutoResize, textTruncation, maxLines, width, height} = node
+  const {textAutoResize, textTruncation, maxLines, width, height, layoutSizingHorizontal, layoutSizingVertical} = node
   switch (textAutoResize) {
     case "WIDTH_AND_HEIGHT":
       break
 
     case "HEIGHT":
-      addClass("w", makeInt(width))
+      addClassWidth(node, addClass)
       break
 
     case "NONE":
-      addClass("w", makeInt(width))
-      addClass("h", makeInt(height))
+      addClassWidth(node, addClass)
+      addClassHeight(node, addClass)
       break
   }
 
@@ -467,7 +469,7 @@ const generateText = async (node:TextNode) => {
     "listOptions",
     "indentation",
     "hyperlink",
-    "openTypeFeatures"
+    // "openTypeFeatures"
   ]).map(segment => ({...segment, fontFamily: segment.fontName?.family, fontWeight: segment.fontName?.style}))
 
   // get common segments style
@@ -495,20 +497,16 @@ const generateText = async (node:TextNode) => {
     BOTTOM: "bottom"
   }
 
-  switch (textAutoResize) {
-    case "NONE": {
-      let textClass = [HORIZONTAL_ALIGN[node.textAlignHorizontal], VERTICAL_ALIGN[node.textAlignVertical]].filter(Boolean).join("+")
-      if (textClass === "center+middle") textClass = "pack"
-      if (textClass) {
-        addClass("text", textClass)
-      }
-      break;
+  // textAutoResize
+  if (textAutoResize === "NONE") {
+    let textClass = [HORIZONTAL_ALIGN[node.textAlignHorizontal], VERTICAL_ALIGN[node.textAlignVertical]].filter(Boolean).join("+")
+    if (textClass === "center+middle") textClass = "pack"
+    if (textClass) {
+      addClass("text", textClass)
     }
-
-    case "HEIGHT": {
-      addClass("text", HORIZONTAL_ALIGN[node.textAlignHorizontal])
-      break
-    }
+  }
+  else {
+    addClass("text", HORIZONTAL_ALIGN[node.textAlignHorizontal])
   }
 
   // textTruncation
@@ -526,7 +524,6 @@ const generateText = async (node:TextNode) => {
     addClass("opacity", makeNumber(node.opacity))
   }
 
-
   const textContent = segments.length === 1 ? nl2br(node.characters) : segments.map(segment => {
     const {addClass, cls} = createClassBuilder()
     // remove common style
@@ -536,55 +533,33 @@ const generateText = async (node:TextNode) => {
     addClassFont(segment, addClass)
 
     const className = cls.join(" ")
-    return `<span ${CLASS_NAME}="${className}">${nl2br(segment.characters)}</span>`
+    return cls.length ? `<span ${CLASS_NAME}="${className}">${nl2br(segment.characters)}</span>` : nl2br(segment.characters)
   }).join("")
 
   const className = cls.join(" ")
-  return `<div ${CLASS_NAME}="${className}">${textContent}</div>\n`
+  return `<div ${CLASS_NAME}="${className}">${textContent}</div>`
 }
 
 
-const generateShape = async (node) => {
-
-  const cls = []
-  const {addClass} = createClassBuilder(cls)
-
-  // Constraints
-  addClassPosition(node, addClass)
-
-  // width
-  addClassWidth(node, addClass)
-
-  // height
-  addClassHeight(node, addClass)
-
-  // Radius
-  addClassBorderRadius(node, addClass)
-
-  // bg
-  const bg = node.fills.filter(fill => fill.visible)[0]
-  if (bg?.type === "SOLID") {
-    addClass("bg", makeColor(bg.color, bg.opacity))
-  }
-
-  // border
-  addClassBorder(node, addClass)
-
-  // effectStyle
-  addEffectClass(node, addClass)
-
-  // opacity
-  addOpacity(node, addClass)
-
-  const className = cls.join(" ")
-  return `<div ${CLASS_NAME}="${className}"></div>\n`
+const isNoneVisualNode = (node) => {
+  if (node.visible === false) return true
+  if (node.opacity === 0) return true
+  if (node.fills && node.fills.filter(fill => fill.visible).length > 0) return false
+  if (node.strokes && node.strokes.filter(stroke => stroke.visible).length > 0) return false
+  if (node.effects && node.effects.filter(effect => effect.visible).length > 0) return false
+  if (!node.children || !node.children.length) return true
+  if (node.children.every(isNoneVisualNode)) return true
+  return false
 }
-
 
 const isAsset = (node) => {
   if (node.isAsset) return true
-  if (node.children && node.children.length > 0 && node.children.every(c => c.isAsset)) return true
-  console.log(node, node.children && node.children.map(c => [c, c.isAsset]))
+  if (node.exportSettings && node.exportSettings.length) {
+    if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
+      return false
+    }
+    return true
+  }
   return false
 }
 
@@ -598,26 +573,44 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
     const {addClass} = createClassBuilder(cls)
 
     try {
-      addClassPosition(node, addClass)
-      const content = await node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
-
-      if (cls.length) {
-        code = `<div ${CLASS_NAME}="${cls}">\n${content}\n</div>\n`
+      if (isAbsoluteLayout(node)) {
+        addClassPosition(node, addClass)
       }
-      else {
-        code = content
+
+      addClassWidth(node, addClass)
+      addClassHeight(node, addClass)
+
+      node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true}).then((content) => {
+        const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
+        figma.ui.postMessage({type: "assets", id: node.id, svg: inlineSVG})
+      })
+
+      //
+      // if (cls.length) {
+      //   const className = cls.join(" ")
+      //   code = `<div ${CLASS_NAME}="${className}">${indent(inlineSVG)}</div>`
+      // }
+      // else {
+      //   code = inlineSVG
+      // }
+
+      const inlineSVG = `<!-- asset:${node.name} -->`
+      const className = cls.join(" ")
+      code = `<div ${CLASS_NAME}="${className}" data-asset-id="${node.id}"></div>`
+
+      if (node.type === "INSTANCE" || node.type === "COMPONENT") {
+        code = wrapInstance(node, code)
       }
     } catch (e) {
       code = ""
     }
   }
   else if (node.type === "COMPONENT" || node.type === "INSTANCE") code = await generateInstance(node, depth)
-  else if (node.type === "FRAME" || node.type === "GROUP" || node.type === "RECTANGLE") code = await generateFrame(node as FrameNode, depth)
+  else if (node.type === "FRAME" || node.type === "GROUP" || node.type === "RECTANGLE" || node.type === "ELLIPSE" || node.type === "LINE") code = await generateFrame(node as FrameNode, depth)
   else if (node.type === "TEXT") code = await generateText(node)
   else if (node.type === "COMPONENT_SET") code = await generateComponentSet(node, depth)
 
-  const space = "  "
-  return code.split("\n").map(line => space + line).join("\n")
+  return code
 }
 
 const getGeneratedCode = async (node) => {
@@ -668,14 +661,7 @@ const generate = async () => {
   const width = Math.floor(rect.width) || 0
   const height = (Math.floor(rect.height) || 0) + 200
   figma.ui.resize(width, height)
-  figma.ui.postMessage({code, backgroundColor, pageBackgroundColor})
-}
-
-if (figma.editorType === "figma") {
-  figma.showUI(__html__)
-  figma.on("selectionchange", generate)
-  figma.on("currentpagechange", generate)
-  void generate()
+  figma.ui.postMessage({type: "code", code, backgroundColor, pageBackgroundColor, width, height})
 }
 
 // Make sure that we're in Dev Mode and running codegen
@@ -692,4 +678,10 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
       code: code,
     }]
   })
+}
+else {
+  figma.showUI(__html__)
+  figma.on("selectionchange", generate)
+  figma.on("currentpagechange", generate)
+  void generate()
 }
