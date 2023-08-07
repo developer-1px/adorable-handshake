@@ -1,3 +1,13 @@
+import {makeAdorableStyleColor} from "../codegen/adorableCSS";
+import {makeTailwindStyleColor} from "../codegen/tailwindCSS";
+
+export const OPTIONS = {
+  "type": "adorablecss"
+}
+
+export const isNumber = (value) => +value === +value
+export const px = (value) => isNumber(value) ? value + "px" : value
+
 export const pad = (s):string => s.length === 1 ? "0" + s : s
 
 export const hex = (num:number):string => pad((Math.round(num * 255)).toString(16))
@@ -13,11 +23,15 @@ export const makeHexColor = (r:number, g:number, b:number) => {
   return hexColor.join("")
 }
 
-export const makeColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b)}${opacity === 1 ? "" : makeNumber(opacity)}`
+export const makeColor = ({r, g, b}, opacity = 1) => {
+  if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
+  if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
+}
+
 
 export const makeGradientLinear = (paint:GradientPaint) => {
   // https://github.com/jiangyijie27/figma-copy-css-and-react-style/blob/master/code.ts
-  const {gradientTransform, gradientStops} =  paint as GradientPaint
+  const {gradientTransform, gradientStops} = paint as GradientPaint
   if (!gradientTransform || !gradientStops) {
     return ""
   }
@@ -51,7 +65,7 @@ export const makeGradientLinear = (paint:GradientPaint) => {
     y: data.m10 * param.x + data.m11 * param.y,
   }
   const rad = makeNumber((Math.atan2(rotationData.y * rotationTruthy, rotationData.x * rotationTruthy) / Math.PI) * 180)
-  const gradientColors = gradientStops.map((gradient) => `${makeColor(gradient.color)}/${makeNumber(gradient.position * 100)}%`)
+  const gradientColors = gradientStops.map((gradient) => `${makeColor(gradient.color, gradient.color.a)}/${makeNumber(gradient.position * 100)}%`)
 
   return `linear-gradient(${rad}deg,${gradientColors})`
 }
@@ -81,3 +95,12 @@ export const ab2str = (buf) => String.fromCharCode.apply(null, new Uint16Array(b
 export const capitalize = (str:string) => str.charAt(0).toUpperCase() + str.slice(1)
 
 export const nl2br = (str:string) => str.replace(/(\r\n|\n|\r|\u2028|\u2029)/g, '<br/>');
+
+export const indent = (code:string) => code ? "\n" + code.split("\n").map(line => "  " + line).join("\n") + "\n" : ""
+
+export const traverse = (node, callback) => {
+  callback(node)
+  if (node.children && node.children.length) {
+    node.children.forEach(child => traverse(child, callback))
+  }
+}

@@ -1,6 +1,7 @@
 {
   "name": "New Handshake",
   "api": "1.0.0",
+  "id": "ce27d9c6-3887-4d85-adbc-ac04099a850f",
   "main": "code.js",
   "editorType": ["figma", "dev"],
   "capabilities": ["inspect", "codegen"],

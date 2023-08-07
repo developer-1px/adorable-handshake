@@ -5,24 +5,28 @@ let bg = ""
 let pageBg = "#111"
 let offsetWidth = document.body.offsetWidth
 let width = offsetWidth
+let height = document.body.offsetHeight
 let scale = 1
 
 window.onresize = () => {
   offsetWidth = document.body.offsetWidth
-  scale = offsetWidth / width
+  scale = Math.min(1, offsetWidth / width)
 }
 
 window.onmessage = (event) => {
+  console.log("Event", event)
+
   const type = event.data?.pluginMessage?.type
 
   if (type === "code") {
-    const {code, backgroundColor, pageBackgroundColor, width: w, height} = event.data.pluginMessage
+    const {code, backgroundColor, pageBackgroundColor, width: w, height: h} = event.data.pluginMessage
     scriptCode = code
     html = code
     bg = backgroundColor
     pageBg = pageBackgroundColor
     width = w
-    scale = offsetWidth / width
+    height = h
+    scale = Math.min(1, offsetWidth / width)
     return
   }
 
@@ -36,8 +40,8 @@ window.onmessage = (event) => {
 }
 </script>
 
-<main class="vbox h(100%) bg(--bg)" style:--bg={bg}>
-  <div class="c(#000)">{offsetWidth} / {width} / {scale}</div>
-  <section class="relative bg(--bg) >w(~100%) vbox" style:--bg={bg} style:transform="scale({1})">{@html html}</section>
-  <textarea class="h(200~) h(fill) bg(#000) c(#fff) font(8) monospace no-border" spellcheck="false" wrap="off">{scriptCode}</textarea>
+<main class="layer vbox(left) bg(--bg)" style:--bg={pageBg}>
+  <section class="relative vbox(left) bg(--bg)" style:--bg={bg} style:zoom="{scale}" style:width="{width}px" style:height="{height}px">{@html html}</section>
+  <textarea class="h(200~) w(fill) h(fill) bg(#000) c(#fff) font(8/12)! monospace no-border" spellcheck="false"
+            wrap="off">{scriptCode}</textarea>
 </main>
