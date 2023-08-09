@@ -1,6 +1,6 @@
 import {capitalize, isNumber, makeColor, makeFourSideValues, makeGradientLinear, makeInt, makeNumber, nl2br, px, unitValue, indent, OPTIONS, makeHexColor} from "../libs/utils"
 
-export const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b)}${opacity === 1 ? "" : (opacity * 255).toString(16)}`
+export const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b, opacity)}${opacity === 1 ? "" : Math.round(+opacity * 255).toString(16)}`
 
 type AddClass = (prop, value?) => void
 
@@ -52,9 +52,13 @@ const addClassHeight = (node:FrameNode, addClass:AddClass) => {
 const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => {
   if (node.type === "ELLIPSE") addClass("rounded", "100%")
   else {
-    const {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
+    let {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
     if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
-      // addClass("rounded", `r(${makeFourSideValues(topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius)})`)
+      topLeftRadius = Math.round(topLeftRadius)
+      topRightRadius = Math.round(topRightRadius)
+      bottomRightRadius = Math.round(bottomRightRadius)
+      bottomLeftRadius = Math.round(bottomLeftRadius)
+
       // @TODO: 4 corner radius
       addClass("rounded", topLeftRadius)
     }
@@ -134,13 +138,9 @@ const addClassPosition = (node:SceneNode, addClass:AddClass) => {
     const x = Math.floor(rect2.x - rect1.x)
     const y = Math.floor(rect2.y - rect1.y)
 
-    if (x === 0 && y === 0) {
-      addClass("absolute")
-      return
-    }
     addClass("absolute")
-    addClass("top", y)
-    addClass("left", x)
+    if (y !== 0) addClass("top", y)
+    if (x !== 0) addClass("left", x)
     return
   }
 
@@ -628,5 +628,5 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
 
 export const getGeneratedCode = async (node) => {
   const code = await generateCode(node, 0)
-  return code.replace(/\n+/g, "\n")
+  return code.replace(/(\n\s*\n)+/g, "\n\n")
 }

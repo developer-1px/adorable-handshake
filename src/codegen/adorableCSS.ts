@@ -50,8 +50,12 @@ const addClassHeight = (node:FrameNode, addClass:AddClass) => {
 const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => {
   if (node.type === "ELLIPSE") addClass("r", "100%")
   else {
-    const {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
+    let {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
     if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
+      topLeftRadius = Math.round(topLeftRadius)
+      topRightRadius = Math.round(topRightRadius)
+      bottomRightRadius = Math.round(bottomRightRadius)
+      bottomLeftRadius = Math.round(bottomLeftRadius)
       addClass(`r(${makeFourSideValues(topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius)})`)
     }
   }
@@ -631,5 +635,5 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
 
 export const getGeneratedCode = async (node) => {
   const code = await generateCode(node, 0)
-  return code.replace(/\n+/g, "\n")
+  return code.replace(/(\n\s*\n)+/g, "\n\n")
 }

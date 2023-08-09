@@ -1,6 +1,7 @@
 import {makeColor, OPTIONS} from "./libs/utils"
 import {getGeneratedCode} from "./codegen"
-OPTIONS.type = "adorablecss"
+// OPTIONS.type = "adorablecss"
+OPTIONS.type = "tailwindcss"
 
 const generateCodeWithUI = async () => {
   const selection = figma.currentPage.selection

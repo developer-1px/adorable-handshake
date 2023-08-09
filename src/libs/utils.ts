@@ -17,9 +17,9 @@ export const makeInt = (num:number) => makeNumber(Math.round(num))
 
 export const makeNumber = (num:number) => num.toFixed(2).replace(/^0+|\.00$|0+$/g, "") || "0"
 
-export const makeHexColor = (r:number, g:number, b:number) => {
+export const makeHexColor = (r:number, g:number, b:number, a:number = 1) => {
   let hexColor = [r, g, b].map(hex)
-  if (hexColor.every(h => h[0] === h[1])) hexColor = hexColor.map(h => h[0])
+  if (a === 1 && hexColor.every(h => h[0] === h[1])) hexColor = hexColor.map(h => h[0])
   return hexColor.join("")
 }
 
