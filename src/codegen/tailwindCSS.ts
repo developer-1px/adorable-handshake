@@ -2,6 +2,8 @@ import {capitalize, isNumber, makeColor, makeFourSideValues, makeGradientLinear,
 
 export const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b, opacity)}${opacity === 1 ? "" : Math.round(+opacity * 255).toString(16)}`
 
+const makeTailwindValue = (value) => px(value).replace(/\s+/g, "_")
+
 type AddClass = (prop, value?) => void
 
 // @TODO: TBD
@@ -13,7 +15,7 @@ const COMMENT_END = isReact ? "*/}" : "-->"
 const createClassBuilder = (cls:string[] = []) => {
   function addClass(prop, value?) {
     if (arguments.length === 2 && (value === null || value === undefined)) return
-    cls.push(`${prop}${value ? "-[" + px(value) + "]" : ""}`)
+    cls.push(`${prop}${value ? "-[" + makeTailwindValue(value) + "]" : ""}`)
   }
 
   return {addClass, cls}
@@ -22,7 +24,8 @@ const createClassBuilder = (cls:string[] = []) => {
 const addClassWidth = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingHorizontal, width, minWidth, maxWidth} = node
 
-  if (layoutSizingHorizontal === "HUG") {}
+  if (node.constraints?.horizontal === "STRETCH" || node.constraints?.horizontal === "SCALE") {}
+  else if (layoutSizingHorizontal === "HUG") {}
   else if (layoutSizingHorizontal === "FIXED") addClass("w", makeInt(width))
   else if (layoutSizingHorizontal === "FILL") {
     if (node.parent.layoutMode === "HORIZONTAL") addClass("flex-1")
@@ -37,7 +40,8 @@ const addClassWidth = (node:FrameNode, addClass:AddClass) => {
 const addClassHeight = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingVertical, height, minHeight, maxHeight} = node
 
-  if (layoutSizingVertical === "HUG") {}
+  if (node.constraints?.vertical === "STRETCH" || node.constraints?.vertical === "SCALE") {}
+  else if (layoutSizingVertical === "HUG") {}
   else if (layoutSizingVertical === "FIXED") addClass("h", makeInt(height))
   else if (layoutSizingVertical === "FILL") {
     if (node.parent.layoutMode === "VERTICAL") addClass("flex-1")
@@ -131,7 +135,7 @@ const isAbsoluteLayout = (node) => {
   return false
 }
 
-const addClassPosition = (node:SceneNode, addClass:AddClass) => {
+const addClassPosition = (node:FrameNode, addClass:AddClass) => {
   if (isAbsoluteLayout(node)) {
     const rect1 = node.parent.absoluteBoundingBox
     const rect2 = node.absoluteBoundingBox
@@ -139,8 +143,69 @@ const addClassPosition = (node:SceneNode, addClass:AddClass) => {
     const y = Math.floor(rect2.y - rect1.y)
 
     addClass("absolute")
-    if (y !== 0) addClass("top", y)
-    if (x !== 0) addClass("left", x)
+    const {horizontal = "MIN", vertical = "MIN"} = node.constraints ?? {}
+    if (horizontal === "MIN" && vertical === "MIN" && x === 0 && y === 0) {
+      return
+    }
+
+    const right = Math.floor(rect1.x + rect1.width - rect2.x - rect2.width)
+    const bottom = Math.floor(rect1.y + rect1.height - rect2.y - rect2.height)
+
+    const offsetXFromCenter = Math.floor(rect2.x - rect1.x - (rect1.width / 2 - rect2.width / 2))
+    const offsetYFromCenter = Math.floor(rect2.y - rect1.y - (rect1.height / 2 - rect2.height / 2))
+
+    const percentLeft = Math.round((x / rect1.width) * 100)
+    const percentRight = Math.round((right / rect1.width) * 100)
+
+    // 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
+    switch (horizontal) {
+      case "MIN": {
+        addClass("left", x);
+        break
+      }
+      case "MAX": {
+        addClass("right", right);
+        break
+      }
+      case "CENTER": {
+        if (Math.abs(offsetXFromCenter) <= 1) addClass("left-1/2")
+        else addClass("left", "calc(50%" + (offsetXFromCenter > 0 ? "+" : "") + px(offsetXFromCenter) + ")")
+        addClass("-translate-x-1/2")
+        break
+      }
+      case "STRETCH": {
+        addClass("left", x)
+        addClass("right", right)
+        break
+      }
+      case "SCALE": {
+        addClass("left", percentLeft + "%")
+        addClass("right", percentRight + "%")
+      }
+    }
+
+    switch (vertical) {
+      case "MIN": {
+        addClass("top", y);
+        break
+      }
+      case "MAX": {
+        addClass("bottom", bottom);
+        break
+      }
+      case "CENTER": {
+        if (Math.abs(offsetYFromCenter) <= 1) addClass("top-1/2")
+        else addClass("top", "calc(50%" + (offsetYFromCenter > 0 ? "+" : "") + px(offsetYFromCenter) + ")")
+        addClass("-translate-y-1/2")
+        break
+      }
+      case "STRETCH": {
+        addClass("top", y)
+        addClass("bottom", bottom)
+        break
+      }
+    }
+
     return
   }
 

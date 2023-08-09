@@ -134,7 +134,7 @@ const isAbsoluteLayout = (node) => {
   return false
 }
 
-const addClassPosition = (node:SceneNode, addClass:AddClass) => {
+const addClassPosition = (node:FrameNode, addClass:AddClass) => {
   if (isAbsoluteLayout(node)) {
     const rect1 = node.parent.absoluteBoundingBox
     const rect2 = node.absoluteBoundingBox
@@ -145,8 +145,19 @@ const addClassPosition = (node:SceneNode, addClass:AddClass) => {
       addClass("absolute")
       return
     }
-    addClass("absolute", x + "," + y)
-    return
+
+    if (!node.constraints) {
+      addClass("absolute", x + "," + y)
+      return
+    }
+
+    const {horizontal, vertical} = node.constraints
+    if ((horizontal === "MIN" || horizontal === "MAX") && (vertical === "MIN" || vertical === "MAX")) {
+      const posX = (x !== 0 && horizontal === "MAX") ? "~" + x : x
+      const posY = (y !== 0 && vertical === "MAX") ? "~" + y : y
+      addClass("absolute", posX + "," + posY)
+      return
+    }
   }
 
   if (node.findChild && node.findChild(isAbsoluteLayout)) {

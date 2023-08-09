@@ -6,7 +6,7 @@ export const OPTIONS = {
 }
 
 export const isNumber = (value) => +value === +value
-export const px = (value) => isNumber(value) ? value + "px" : value
+export const px = (value) => isNumber(value) ? Math.round(value) + "px" : value
 
 export const pad = (s):string => s.length === 1 ? "0" + s : s
 
