@@ -1,9 +1,13 @@
 import {makeColor, OPTIONS} from "./libs/utils"
 import {getGeneratedCode} from "./codegen"
-// OPTIONS.type = "adorablecss"
-OPTIONS.type = "tailwindcss"
+OPTIONS.type = "adorablecss"
+// OPTIONS.type = "tailwindcss"
+
+let selectedFlag = false
 
 const generateCodeWithUI = async () => {
+  selectedFlag = false
+
   const selection = figma.currentPage.selection
   if (!selection.length) return
 
@@ -50,7 +54,15 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
 }
 else {
   figma.showUI(__html__)
-  figma.on("selectionchange", generateCodeWithUI)
+  figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
   void generateCodeWithUI()
+
+  figma.ui.onmessage = (message) => {
+    if (message.type === "selectNode") {
+      selectedFlag = true
+      figma.currentPage.selection = [figma.getNodeById(message.id)]
+    }
+    console.log("got this from the UI", message)
+  }
 }

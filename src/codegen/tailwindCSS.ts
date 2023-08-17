@@ -1,4 +1,4 @@
-import {capitalize, isNumber, makeColor, makeFourSideValues, makeGradientLinear, makeInt, makeNumber, nl2br, px, unitValue, indent, OPTIONS, makeHexColor} from "../libs/utils"
+import {capitalize, indent, isNumber, makeColor, makeGradientLinear, makeHexColor, makeInt, makeNumber, nl2br, px, unitValue} from "../libs/utils"
 
 export const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b, opacity)}${opacity === 1 ? "" : Math.round(+opacity * 255).toString(16)}`
 
@@ -15,7 +15,8 @@ const COMMENT_END = isReact ? "*/}" : "-->"
 const createClassBuilder = (cls:string[] = []) => {
   function addClass(prop, value?) {
     if (arguments.length === 2 && (value === null || value === undefined)) return
-    cls.push(`${prop}${value ? "-[" + makeTailwindValue(value) + "]" : ""}`)
+    if (prop === "opacity" || prop === "z") cls.push(`${prop}${value ? "-[" + value + "]" : ""}`)
+    else cls.push(`${prop}${value ? "-[" + makeTailwindValue(value) + "]" : ""}`)
   }
 
   return {addClass, cls}
@@ -57,33 +58,47 @@ const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => 
   if (node.type === "ELLIPSE") addClass("rounded", "100%")
   else {
     let {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
-    if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
-      topLeftRadius = Math.round(topLeftRadius)
-      topRightRadius = Math.round(topRightRadius)
-      bottomRightRadius = Math.round(bottomRightRadius)
-      bottomLeftRadius = Math.round(bottomLeftRadius)
+    topLeftRadius = Math.round(topLeftRadius)
+    topRightRadius = Math.round(topRightRadius)
+    bottomRightRadius = Math.round(bottomRightRadius)
+    bottomLeftRadius = Math.round(bottomLeftRadius)
 
-      // @TODO: 4 corner radius
-      addClass("rounded", topLeftRadius)
+    if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
+      if (topLeftRadius === topRightRadius && topRightRadius === bottomRightRadius && bottomRightRadius === bottomLeftRadius) {
+        addClass("rounded", topLeftRadius)
+        return
+      }
+
+      addClass("rounded-tl", topLeftRadius)
+      addClass("rounded-tr", topRightRadius)
+      addClass("rounded-br", bottomRightRadius)
+      addClass("rounded-bl", bottomLeftRadius)
     }
   }
 }
 
 const addClassBorder = (node, addClass:AddClass) => {
-  try {
-    const {strokes, strokeAlign, strokeWeight} = node
-    const border = strokes.find(stroke => stroke.visible)
+  let {strokes, strokeAlign, strokeWeight, strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight} = node
+  const border = strokes.find(stroke => stroke.visible)
+  if (!border) return
 
-    if (border && border.color && strokeWeight >= 1) {
-      if (strokeAlign === "OUTSIDE") {
-        addClass("ring", [strokeWeight > 1 ? strokeWeight : null, makeColor(border.color, border.opacity)].filter(Boolean).join("/"))
-      }
-      else {
-        addClass("border", `${makeColor(border.color, border.opacity)}`)
-        addClass("border", makeInt(node.strokeWeight))
-      }
-    }
-  } catch (e) {}
+  if (typeof strokeWeight === "number" && strokeWeight >= 0) {
+    strokeWeight = Math.round(strokeWeight)
+    addClass("border", `${strokeWeight}/${makeColor(border.color, border.opacity)}`)
+  }
+  else {
+    addClass("border", `${makeColor(border.color, border.opacity)}`)
+
+    strokeTopWeight = Math.round(strokeTopWeight)
+    strokeRightWeight = Math.round(strokeRightWeight)
+    strokeBottomWeight = Math.round(strokeBottomWeight)
+    strokeLeftWeight = Math.round(strokeLeftWeight)
+
+    if (strokeTopWeight) addClass("border-t", strokeTopWeight)
+    if (strokeRightWeight) addClass("border-r", strokeRightWeight)
+    if (strokeBottomWeight) addClass("border-b", strokeBottomWeight)
+    if (strokeLeftWeight) addClass("border-l", strokeLeftWeight)
+  }
 }
 
 const addEffectClass = (node:FrameNode, addClass:AddClass) => {
@@ -356,14 +371,14 @@ const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
 }
 
 // @TODO: Group에도 opacity가 있다. display:contents를 활용하는 방법을 고민해보자.
-const addOpacity = (node:SceneNode, addClass:AddClass) => {
+const addOpacity = (node:FrameNode, addClass:AddClass) => {
   // opacity
   if (node.opacity !== 1) addClass("opacity", makeNumber(node.opacity))
 }
 
 // ----------------------------------------------------------------
 
-const wrapInstance = (node, code) => {
+const wrapInstance = (node:InstanceNode, code:string) => {
   const mainComponent = node.mainComponent || node
   const mainComponentSet = (mainComponent.parent && mainComponent.parent?.type === "COMPONENT_SET") ? mainComponent.parent : mainComponent
 
@@ -379,7 +394,7 @@ const generateChild = async (depth, children, callback) => {
 
 const generateComponentSet = async (node, depth) => {
   const children = await generateChild(depth, node.children, content => content)
-  return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>`
+  return `<div ${CLASS_NAME}="vbox gap(20)" data-node-id="${node.id}">\n${children}\n</div>`
 }
 
 const generateInstance = async (node, depth) => {
@@ -426,7 +441,7 @@ const generateFrame = async (node:FrameNode, depth:number) => {
 
   // Dev Log
   const className = cls.join(" ")
-  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}">${indent(content)}</div>`)
+  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${indent(content)}</div>`)
 }
 
 const addClassFont = (node:TextNode, addClass:AddClass) => {
@@ -616,14 +631,15 @@ const generateText = async (node:TextNode) => {
     addClassFont(segment, addClass)
 
     const className = cls.join(" ")
-    return cls.length ? `<span ${CLASS_NAME}="${className}">${nl2br(segment.characters)}</span>` : nl2br(segment.characters)
+    return cls.length ? `<span ${CLASS_NAME}="${className}" data-node-id="${node.id}">${nl2br(segment.characters)}</span>` : nl2br(segment.characters)
   }).join("")
 
   const className = cls.join(" ")
-  return `<div ${CLASS_NAME}="${className}">${textContent}</div>`
+  return `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${textContent}</div>`
 }
 
 const isAsset = (node) => {
+  // @TODO: Vertor이지만 LINE이거나 ELLIPSE일 경우는 그릴 수 있어서 Asset가 아니어야 한다!
   if (node.isAsset) return true
   if (node.findChild && node.findChild(child => child.isMask)) return true
   if (node.exportSettings && node.exportSettings.length) {
@@ -664,7 +680,7 @@ const generateAsset = async (node:SceneNode) => {
     }
 
     const className = cls.join(" ")
-    code = `<figure ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}"></figure>`
+    code = `<figure ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}" data-node-id="${node.id}"></figure>`
 
     if (node.type === "INSTANCE" || node.type === "COMPONENT") {
       code = wrapInstance(node, code)

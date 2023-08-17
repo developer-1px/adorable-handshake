@@ -68,3 +68,13 @@ html, body {
 [class].flex-1 {
   flex: 1 1 0;
 }
+
+
+[class][class].selected,
+[class][class].selected:hover {
+  outline: 2px solid rebeccapurple !important;
+}
+
+div:has(>.selected) {
+  outline: 1px dashed rebeccapurple !important;
+}

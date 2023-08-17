@@ -1,4 +1,4 @@
-import {capitalize, makeColor, makeFourSideValues, makeGradientLinear, makeInt, makeNumber, nl2br, unitValue, indent, makeHexColor} from "../libs/utils"
+import {capitalize, makeColor, makeFourSideValues, makeGradientLinear, makeInt, makeNumber, nl2br, unitValue, indent, makeHexColor, px} from "../libs/utils"
 
 export const makeAdorableStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b)}${opacity === 1 ? "" : makeNumber(opacity)}`
 
@@ -13,7 +13,7 @@ const COMMENT_END = isReact ? "*/}" : "-->"
 const createClassBuilder = (cls:string[] = []) => {
   function addClass(prop, value?) {
     if (arguments.length === 2 && (value === null || value === undefined)) return
-    cls.push(`${prop}${value ? "(" + value + ")" : ""}`)
+    cls.push(`${prop}${(value || value === 0) ? "(" + value + ")" : ""}`)
   }
 
   return {addClass, cls}
@@ -22,7 +22,8 @@ const createClassBuilder = (cls:string[] = []) => {
 const addClassWidth = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingHorizontal, width, minWidth, maxWidth} = node
 
-  if (layoutSizingHorizontal === "HUG") {}
+  if (node.constraints?.horizontal === "STRETCH" || node.constraints?.horizontal === "SCALE") {}
+  else if (layoutSizingHorizontal === "HUG") {}
   else if (layoutSizingHorizontal === "FILL") addClass("w", "fill")
   else if (layoutSizingHorizontal === "FIXED") addClass("w", makeInt(width))
 
@@ -36,7 +37,8 @@ const addClassWidth = (node:FrameNode, addClass:AddClass) => {
 const addClassHeight = (node:FrameNode, addClass:AddClass) => {
   const {layoutSizingVertical, height, minHeight, maxHeight} = node
 
-  if (layoutSizingVertical === "HUG") {}
+  if (node.constraints?.vertical === "STRETCH" || node.constraints?.vertical === "SCALE") {}
+  else if (layoutSizingVertical === "HUG") {}
   else if (layoutSizingVertical === "FILL") addClass("h", "fill")
   else if (layoutSizingVertical === "FIXED") addClass("h", makeInt(height))
 
@@ -62,26 +64,26 @@ const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => 
 }
 
 const addClassBorder = (node, addClass:AddClass) => {
-  try {
-    const {strokes, strokeAlign, strokeWeight} = node
+  let {strokes, strokeAlign, strokeWeight, strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight} = node
+  const border = strokes?.find(stroke => stroke.visible)
+  if (!border) return
 
-    const border = strokes.filter(stroke => stroke.visible)[0]
+  if (typeof strokeWeight === "number" && strokeWeight >= 0) {
+    strokeWeight = Math.round(strokeWeight)
+    addClass("b", `${strokeWeight !== 1 ? strokeWeight + "/" : ""}${makeColor(border.color, border.opacity)}`)
+  }
+  else {
+    addClass("bc", `${makeColor(border.color, border.opacity)}`)
 
-    // @ts-ignore
-    if (border && border.color && strokeWeight > 0) {
+    strokeTopWeight = Math.round(strokeTopWeight)
+    strokeRightWeight = Math.round(strokeRightWeight)
+    strokeBottomWeight = Math.round(strokeBottomWeight)
+    strokeLeftWeight = Math.round(strokeLeftWeight)
 
-      if (strokeAlign === "OUTSIDE") {
-        addClass("ring", [strokeWeight > 1 ? strokeWeight : null, makeColor(border.color, border.opacity)].filter(Boolean).join("/"))
-      }
-      else {
-        // @ts-ignore
-        addClass("b", `${makeColor(border.color, border.opacity)}`)
-        if (strokeWeight > 1) {
-          addClass("bw", node.strokeWeight)
-        }
-      }
-    }
-  } catch (e) {
+    if (strokeTopWeight) addClass("btw", strokeTopWeight)
+    if (strokeRightWeight) addClass("brw", strokeRightWeight)
+    if (strokeBottomWeight) addClass("bbw", strokeBottomWeight)
+    if (strokeLeftWeight) addClass("blw", strokeLeftWeight)
   }
 }
 
@@ -118,8 +120,7 @@ const addEffectClass = (node:FrameNode, addClass:AddClass) => {
 }
 
 const isAbsoluteLayout = (node) => {
-  const selection = figma.currentPage.selection
-  if (node === selection[0]) {
+  if (!node.parent.absoluteBoundingBox) {
     return false
   }
 
@@ -138,26 +139,91 @@ const addClassPosition = (node:FrameNode, addClass:AddClass) => {
   if (isAbsoluteLayout(node)) {
     const rect1 = node.parent.absoluteBoundingBox
     const rect2 = node.absoluteBoundingBox
+
     const x = Math.floor(rect2.x - rect1.x)
     const y = Math.floor(rect2.y - rect1.y)
+    const right = Math.floor(rect1.x + rect1.width - rect2.x - rect2.width)
+    const bottom = Math.floor(rect1.y + rect1.height - rect2.y - rect2.height)
 
-    if (x === 0 && y === 0) {
+    const {horizontal = "MIN", vertical = "MIN"} = node.constraints ?? {}
+    if (horizontal === "MIN" && vertical === "MIN" && x === 0 && y === 0) {
       addClass("absolute")
       return
     }
-
-    if (!node.constraints) {
+    if (horizontal === "MIN" && vertical === "MIN") {
       addClass("absolute", x + "," + y)
       return
     }
-
-    const {horizontal, vertical} = node.constraints
-    if ((horizontal === "MIN" || horizontal === "MAX") && (vertical === "MIN" || vertical === "MAX")) {
-      const posX = (x !== 0 && horizontal === "MAX") ? "~" + x : x
-      const posY = (y !== 0 && vertical === "MAX") ? "~" + y : y
-      addClass("absolute", posX + "," + posY)
+    if (horizontal === "CENTER" && vertical === "CENTER") {
+      addClass("absolute", "center")
       return
     }
+
+    // layer
+    if ((horizontal === "STRETCH" || horizontal === "SCALE") && (vertical === "STRETCH" || vertical === "SCALE")
+      && x === 0 && y === 0 && right === 0 && bottom === 0) {
+      addClass("layer")
+      return
+    }
+
+    addClass("absolute")
+
+    const offsetXFromCenter = Math.floor(rect2.x - rect1.x - (rect1.width / 2 - rect2.width / 2))
+    const offsetYFromCenter = Math.floor(rect2.y - rect1.y - (rect1.height / 2 - rect2.height / 2))
+
+    // 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
+    switch (horizontal) {
+      case "MIN": {
+        addClass("x", x);
+        break
+      }
+      case "MAX": {
+        addClass("x", "~" + right);
+        break
+      }
+      case "CENTER": {
+        if (Math.abs(offsetXFromCenter) <= 1) addClass("x", "center")
+        else addClass("x", "center" + (offsetXFromCenter > 0 ? "+" : "") + px(offsetXFromCenter))
+        break
+      }
+      case "STRETCH": {
+        addClass("x", x + "~" + right)
+        break
+      }
+      case "SCALE": {
+        const percentLeft = Math.round((x / rect1.width) * 100)
+        const percentRight = Math.round((right / rect1.width) * 100)
+        addClass("x", percentLeft + "%" + "~" + percentRight + "%")
+        break
+      }
+    }
+
+    switch (vertical) {
+      case "MIN": {
+        addClass("y", y);
+        break
+      }
+      case "MAX": {
+        addClass("y", "~" + bottom);
+        break
+      }
+      case "CENTER": {
+        if (Math.abs(offsetYFromCenter) <= 1) addClass("y", "center")
+        else addClass("y", "center" + (offsetYFromCenter > 0 ? "+" : "") + px(offsetYFromCenter))
+        break
+      }
+      case "STRETCH": {
+        addClass("y", y + "~" + bottom)
+        break
+      }
+      case "SCALE": {
+        const percentTop = Math.round((y / rect1.height) * 100)
+        const percentBottom = Math.round((bottom / rect1.height) * 100)
+        addClass("y", percentTop + "%" + "~" + percentBottom + "%")
+        break
+      }
+    }
+    return
   }
 
   if (node.findChild && node.findChild(isAbsoluteLayout)) {
@@ -293,6 +359,10 @@ const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
   const hasChildren = numChildren > 0
   if (hasChildren && node.clipsContent) addClass("clip")
   else if (node.findOne(child => child.type === "TEXT" && child.textTruncation === "ENDING")) addClass("clip")
+
+  if (node.overflowDirection === "BOTH") addClass("scroll")
+  else if (node.overflowDirection === "HORIZONTAL") addClass("scroll-x")
+  else if (node.overflowDirection === "VERTICAL") addClass("scroll-y")
 }
 
 // @TODO: Group에도 opacity가 있다. display:contents를 활용하는 방법을 고민해보자.
@@ -366,7 +436,7 @@ const generateFrame = async (node:FrameNode, depth:number) => {
 
   // Dev Log
   const className = cls.join(" ")
-  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}">${indent(content)}</div>`)
+  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${indent(content)}</div>`)
 }
 
 const addClassFont = (node:TextNode, addClass:AddClass) => {
@@ -569,11 +639,11 @@ const generateText = async (node:TextNode) => {
     addClassFont(segment, addClass)
 
     const className = cls.join(" ")
-    return cls.length ? `<span ${CLASS_NAME}="${className}">${nl2br(segment.characters)}</span>` : nl2br(segment.characters)
+    return cls.length ? `<span ${CLASS_NAME}="${className}" data-node-id="${node.id}">${nl2br(segment.characters)}</span>` : nl2br(segment.characters)
   }).join("")
 
   const className = cls.join(" ")
-  return `<div ${CLASS_NAME}="${className}">${textContent}</div>`
+  return `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${textContent}</div>`
 }
 
 const isAsset = (node) => {
@@ -617,7 +687,7 @@ const generateAsset = async (node:SceneNode) => {
     }
 
     const className = cls.join(" ")
-    code = `<figure ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}"></figure>`
+    code = `<picture ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}"></picture>`
 
     if (node.type === "INSTANCE" || node.type === "COMPONENT") {
       code = wrapInstance(node, code)
