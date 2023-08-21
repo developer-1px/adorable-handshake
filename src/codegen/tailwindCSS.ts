@@ -680,7 +680,7 @@ const generateAsset = async (node:SceneNode) => {
     }
 
     const className = cls.join(" ")
-    code = `<figure ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}" data-node-id="${node.id}"></figure>`
+    code = `<figure ${CLASS_NAME}="block ${className}" data-node-id="${node.id}" src="${node.name}" data-node-id="${node.id}"></figure>`
 
     if (node.type === "INSTANCE" || node.type === "COMPONENT") {
       code = wrapInstance(node, code)

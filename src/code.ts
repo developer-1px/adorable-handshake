@@ -36,7 +36,8 @@ const generateCodeWithUI = async () => {
   const rect = node.absoluteBoundingBox
   const width = Math.floor(rect.width) || 0
   const height = (Math.floor(rect.height) || 0)
-  figma.ui.resize(width, height + 200)
+  // figma.ui.resize(width, height + 200)
+  figma.ui.resize(9999, 9999)
   figma.ui.postMessage({type: "code", code, backgroundColor, pageBackgroundColor, width, height})
 }
 
@@ -54,15 +55,19 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
 }
 else {
   figma.showUI(__html__)
+  figma.ui.resize(9999, 9999)
   figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
-  void generateCodeWithUI()
 
   figma.ui.onmessage = (message) => {
-    if (message.type === "selectNode") {
-      selectedFlag = true
-      figma.currentPage.selection = [figma.getNodeById(message.id)]
-    }
-    console.log("got this from the UI", message)
+    // if (message.type === "selectNode") {
+    //   selectedFlag = true
+    //   figma.currentPage.selection = [figma.getNodeById(message.id)].filter(Boolean)
+    // }
+    // console.log("got this from the UI", message)
   }
+
+  setTimeout(() => {
+    void generateCodeWithUI()
+  }, 250)
 }

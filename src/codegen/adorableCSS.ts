@@ -146,10 +146,7 @@ const addClassPosition = (node:FrameNode, addClass:AddClass) => {
     const bottom = Math.floor(rect1.y + rect1.height - rect2.y - rect2.height)
 
     const {horizontal = "MIN", vertical = "MIN"} = node.constraints ?? {}
-    if (horizontal === "MIN" && vertical === "MIN" && x === 0 && y === 0) {
-      addClass("absolute")
-      return
-    }
+
     if (horizontal === "MIN" && vertical === "MIN") {
       addClass("absolute", x + "," + y)
       return
@@ -687,7 +684,7 @@ const generateAsset = async (node:SceneNode) => {
     }
 
     const className = cls.join(" ")
-    code = `<picture ${CLASS_NAME}="block ${className}" data-asset-id="${node.id}" src="${node.name}"></picture>`
+    code = `<picture ${CLASS_NAME}="pack ${className}" data-node-id="${node.id}" src="${node.name}"></picture>`
 
     if (node.type === "INSTANCE" || node.type === "COMPONENT") {
       code = wrapInstance(node, code)

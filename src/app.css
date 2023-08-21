@@ -23,6 +23,7 @@
 
 html, body {
   background: #fff;
+  line-height: 1.2;
 }
 
 #app {
@@ -70,11 +71,15 @@ html, body {
 }
 
 
-[class][class].selected,
-[class][class].selected:hover {
-  outline: 2px solid rebeccapurple !important;
+[class][class].selected {
+  outline: 2px solid #4f80ff !important;
 }
 
-div:has(>.selected) {
-  outline: 1px dashed rebeccapurple !important;
+div:has(>.selected),
+div:has(>.selected) > * {
+  outline: 1px dashed #4f80ff !important;
+}
+
+[class][class].hovered-guide {
+  outline: 2px solid #4f80ff !important;
 }
