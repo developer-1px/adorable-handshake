@@ -13,9 +13,12 @@ window.onmessage = (event) => {
   const type = event.data?.pluginMessage?.type
 
   if (type === "code") {
-    const {code, backgroundColor, pageBackgroundColor, width: w, height: h} = event.data.pluginMessage
+    const msg = event.data.pluginMessage
+    const {code, backgroundColor, pageBackgroundColor, width: w, height: h} = msg
+
+    html = msg.html
     scriptCode = code
-    html = code
+    html = html
     bg = backgroundColor
     pageBg = pageBackgroundColor
     width = w
@@ -37,8 +40,13 @@ $: console.log({dom})
 
 let content:HTMLElement
 
+let debounceTimer
+let isPanning = false
+
+
 const hoverNode = (e) => {
-  if (isWheeling) return
+  if (isPanning) return
+
   const el = e.target.closest("[data-node-id]")
   if (!el) return _hoverNode(null)
   const nodeId = el.getAttribute("data-node-id")
@@ -46,6 +54,8 @@ const hoverNode = (e) => {
 }
 
 const selectNode = (e) => {
+  if (isPanning) return
+
   const el = e.target.closest("[data-node-id]")
   if (!el) return _selectNode(null)
   const nodeId = el.getAttribute("data-node-id")
@@ -62,47 +72,60 @@ const selectNestedNode = (e) => {
 }
 
 
-let wheelMatrix = new DOMMatrix()
-
-let debounceTimer
-let isWheeling = false
+let zoomPanMatrix = new DOMMatrix()
 
 const handleWheel = (event) => {
-  isWheeling = true
+  isPanning = true
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
-    isWheeling = false
+    isPanning = false
   }, 250)
 
   if (event.ctrlKey || event.metaKey || event.shiftKey) {
     const {pageX, pageY} = event
     const rect = event.currentTarget.getBoundingClientRect()
-    const point = new DOMPoint(pageX - rect.x, pageY - rect.y)
-    const newPoint = wheelMatrix.inverse().transformPoint(point)
-    const deltaScale = 1 - event.deltaY / (Math.abs(event.wheelDeltaY) === 240 ? 200 : 500)
-    if (wheelMatrix.a * deltaScale < 0.25) return
-    if (wheelMatrix.a * deltaScale > 4) return
+    const mousePoint = new DOMPoint(pageX - rect.x, pageY - rect.y)
+    const offsetPoint = zoomPanMatrix.inverse().transformPoint(mousePoint)
+    const deltaScale = 1 - event.deltaY / (Math.abs(event.deltaY) === 240 ? 200 : 500)
+    if (zoomPanMatrix.a * deltaScale < 0.25) return
+    if (zoomPanMatrix.a * deltaScale > 4) return
 
-    wheelMatrix = wheelMatrix.translate(newPoint.x, newPoint.y).scale(deltaScale).translate(-newPoint.x, -newPoint.y)
-    wheelMatrix.a = Math.max(0.25, Math.min(wheelMatrix.a, 4))
+    zoomPanMatrix = zoomPanMatrix.translate(offsetPoint.x, offsetPoint.y).scale(deltaScale).translate(-offsetPoint.x, -offsetPoint.y)
+    zoomPanMatrix.a = Math.max(0.25, Math.min(zoomPanMatrix.a, 4))
   }
   else {
-    const scale = wheelMatrix.a
-    wheelMatrix = wheelMatrix.translate(-event.deltaX / scale, -event.deltaY / scale)
+    const scale = zoomPanMatrix.a
+    zoomPanMatrix = zoomPanMatrix.translate(-event.deltaX / scale, -event.deltaY / scale)
+  }
+}
+
+const handleMouseMove = (e:MouseEvent) => {
+  if (e.buttons === 1) {
+    isPanning = true
+    const scale = zoomPanMatrix.a
+    zoomPanMatrix = zoomPanMatrix.translate(e.movementX / scale, e.movementY / scale)
+  }
+  else {
+    isPanning = false
   }
 }
 </script>
 
 <main class="layer hbox(fill) bg(--bg) clip" style:--bg={pageBg}>
-  <div class="w(280) bg(#f9f9f9) br(#000.5) c(#000) scroll">
-    <TreeItem nodes={dom} depth={0} />
+  <div class="w(200) bg(#f9f9f9) br(#000.5) c(#000) scroll">
+    <div class="ml(-20)">
+      <TreeItem nodes={dom} depth={0}/>
+    </div>
   </div>
   <div class="w(fill) vbox clip">
-    <div class="h(fill) relative" on:wheel|preventDefault|stopPropagation={handleWheel}>
+    <div class="h(fill) relative"
+         on:wheel|preventDefault|stopPropagation={handleWheel}
+         on:mousemove|preventDefault|stopPropagation={handleMouseMove}
+    >
       <section class="layer pack >>cursor(default)"
                style:--bg={bg}
                style:transform-origin="0 0"
-               style:transform="{wheelMatrix.toString()}"
+               style:transform="{zoomPanMatrix.toString()}"
                bind:this={content}
                on:mouseover={hoverNode}
                on:mouseleave={hoverNode}
@@ -110,13 +133,12 @@ const handleWheel = (event) => {
                on:click={selectNode}
                on:dblclick={selectNestedNode}
       >
-        <div class="relative bg(--bg) >static!+w(100%~)+h(100%~) clip"
+        <div class="relative bg(--bg) >static!+w(100%)+h(100%)"
              style:width="{width}px"
              style:height="{height}px">{@html html}</div>
       </section>
     </div>
-    <div>{wheelMatrix.toString()}</div>
-    <textarea class="w(fill) h(100) bg(#000) c(#fff) font(8/12)! monospace no-border" spellcheck="false"
-              wrap="off">{scriptCode}</textarea>
   </div>
+  <textarea class="w(400) h(fill) bg(#000) c(#fff) font(8/12)! monospace no-border" spellcheck="false"
+            wrap="off">{scriptCode}</textarea>
 </main>

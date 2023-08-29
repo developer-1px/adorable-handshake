@@ -80,6 +80,10 @@ div:has(>.selected) > * {
   outline: 1px dashed #4f80ff !important;
 }
 
+.selected > * {
+  outline: 1px dashed #ff0000 !important;
+}
+
 [class][class].hovered-guide {
   outline: 2px solid #4f80ff !important;
 }

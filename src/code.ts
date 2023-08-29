@@ -1,11 +1,17 @@
 import {makeColor, OPTIONS} from "./libs/utils"
 import {getGeneratedCode} from "./codegen"
-OPTIONS.type = "adorablecss"
+
+
+import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
+
+// OPTIONS.type = "adorablecss"
 // OPTIONS.type = "tailwindcss"
+OPTIONS.type = "inlineStyle"
+// OPTIONS.type = "styledComponent"
 
 let selectedFlag = false
 
-const generateCodeWithUI = async () => {
+const generateCodeWithUI = () => {
   selectedFlag = false
 
   const selection = figma.currentPage.selection
@@ -14,7 +20,8 @@ const generateCodeWithUI = async () => {
   const node = selection[0]
   console.log("selectedNode: ", node)
 
-  const code = await getGeneratedCode(node)
+  const html = getGeneratedHTML(node)
+  const {code} = getGeneratedCode(node)
 
   // 배경색상 찾기
   const pageBackgroundColor = makeColor(figma.currentPage.backgrounds[0].color)
@@ -36,26 +43,25 @@ const generateCodeWithUI = async () => {
   const rect = node.absoluteBoundingBox
   const width = Math.floor(rect.width) || 0
   const height = (Math.floor(rect.height) || 0)
-  // figma.ui.resize(width, height + 200)
-  figma.ui.resize(9999, 9999)
-  figma.ui.postMessage({type: "code", code, backgroundColor, pageBackgroundColor, width, height})
+  figma.ui.resize(width + 600, Math.max(600, height))
+  // figma.ui.resize(9999, 9999)
+  figma.ui.postMessage({type: "code", html, code, backgroundColor, pageBackgroundColor, width, height})
 }
 
 // Make sure that we're in Dev Mode and running codegen
 if (figma.editorType === "dev" && figma.mode === "codegen") {
   // Register a callback to the "generate" event
   figma.codegen.on("generate", async ({node}) => {
-    const code = await getGeneratedCode(node)
+    const {title, language, code} = getGeneratedCode(node)
     return [{
-      title: "HTML",
-      language: "HTML",
-      code: code,
+      title,
+      language,
+      code,
     }]
   })
 }
 else {
   figma.showUI(__html__)
-  figma.ui.resize(9999, 9999)
   figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
 

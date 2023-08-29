@@ -378,23 +378,23 @@ const wrapInstance = (node, code) => {
   return `\n${COMMENT_START} <${name}> ${COMMENT_END}\n${code}\n${COMMENT_START} </${name}> ${COMMENT_END}\n`
 }
 
-const generateChild = async (depth, children, callback) => {
-  const contents = await Promise.all((children || []).map(params => generateCode(params, depth + 1)))
+const generateChild = (depth, children, callback) => {
+  const contents = (children || []).map(params => generateCode(params, depth + 1))
   const content = contents.filter(Boolean).join("\n")
   return callback(content)
 }
 
-const generateComponentSet = async (node, depth) => {
-  const children = await generateChild(depth, node.children, content => content)
+const generateComponentSet = (node, depth) => {
+  const children = generateChild(depth, node.children, content => content)
   return `<div ${CLASS_NAME}="vbox gap(20)">\n${children}\n</div>`
 }
 
-const generateInstance = async (node, depth) => {
-  const code = await generateFrame(node, depth)
+const generateInstance = (node, depth) => {
+  const code = generateFrame(node, depth)
   return wrapInstance(node, code)
 }
 
-const generateFrame = async (node:FrameNode, depth:number) => {
+const generateFrame = (node:FrameNode, depth:number) => {
 
   const {addClass, cls} = createClassBuilder()
 
@@ -433,7 +433,7 @@ const generateFrame = async (node:FrameNode, depth:number) => {
 
   // Dev Log
   const className = cls.join(" ")
-  return await generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${indent(content)}</div>`)
+  return generateChild(depth, node.children, content => `<div ${CLASS_NAME}="${className}" data-node-id="${node.id}">${indent(content)}</div>`)
 }
 
 const addClassFont = (node:TextNode, addClass:AddClass) => {
@@ -533,7 +533,7 @@ const addClassFont = (node:TextNode, addClass:AddClass) => {
   }
 }
 
-const generateText = async (node:TextNode) => {
+const generateText = (node:TextNode) => {
   const {addClass, cls} = createClassBuilder()
 
   // Position
@@ -622,6 +622,11 @@ const generateText = async (node:TextNode) => {
     }
   }
 
+  // textAutoResize: nowrap
+  if (!(textTruncation === "ENDING" && maxLines <= 1) && textAutoResize === "WIDTH_AND_HEIGHT") {
+    addClass("white-space", "nowrap")
+  }
+
   // opacity
   if (node.opacity !== 1) {
     addClass("opacity", makeNumber(node.opacity))
@@ -655,7 +660,7 @@ const isAsset = (node) => {
   return false
 }
 
-const generateAsset = async (node:SceneNode) => {
+const generateAsset = (node:SceneNode) => {
   let code = ""
 
   const cls = []
@@ -700,7 +705,7 @@ const generateAsset = async (node:SceneNode) => {
   return code
 }
 
-const generateCode = async (node:SceneNode, depth:number = 0) => {
+const generateCode = (node:SceneNode, depth:number = 0) => {
   if (node.visible === false) return ""
 
   if (isAsset(node)) return generateAsset(node)
@@ -711,7 +716,7 @@ const generateCode = async (node:SceneNode, depth:number = 0) => {
   return generateFrame(node as FrameNode, depth)
 }
 
-export const getGeneratedCode = async (node) => {
-  const code = await generateCode(node, 0)
+export const getGeneratedCode = (node) => {
+  const code = generateCode(node, 0)
   return code.replace(/(\n\s*\n)+/g, "\n\n")
 }

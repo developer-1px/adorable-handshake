@@ -2,11 +2,13 @@ import {makeAdorableStyleColor} from "../codegen/adorableCSS";
 import {makeTailwindStyleColor} from "../codegen/tailwindCSS";
 
 export const OPTIONS = {
-  "type": "adorablecss"
+  "type": "inlineStyle"
 }
 
 export const isNumber = (value) => +value === +value
-export const px = (value) => isNumber(value) ? Math.round(value) + "px" : value
+export const isValid = (value) => value === 0 || !!value
+export const px = (value) => (isNumber(value) && value !== 0) ? Math.round(value) + "px" : value
+export const percent = (value) => (isNumber(value) && value !== 0) ? makeNumber(value) + "%" : value
 
 export const pad = (s):string => s.length === 1 ? "0" + s : s
 
@@ -26,6 +28,7 @@ export const makeHexColor = (r:number, g:number, b:number, a:number = 1) => {
 export const makeColor = ({r, g, b}, opacity = 1) => {
   if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
   if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
+  return makeTailwindStyleColor({r, g, b}, opacity)
 }
 
 
@@ -70,7 +73,7 @@ export const makeGradientLinear = (paint:GradientPaint) => {
   return `linear-gradient(${rad}deg,${gradientColors})`
 }
 
-export const fourSideValues = (t, r, b, l):number[] => {
+export const fourSideValues = (t, r, b, l) => {
   if (t === r && r === b && b === l) return [t]
   if (t === b && r === l) return [t, r]
   if (t !== b && r === l) return [t, r, b]

@@ -1,7 +1,6 @@
 <script lang="ts">
 import TreeItem from "./TreeItem.svelte";
 import {_hoverNode, _selectNode, selectedNodeId$} from "../store/store";
-import {onMount} from "svelte";
 
 export let node:Element
 
@@ -32,32 +31,33 @@ $: isSelected = $selectedNodeId$ === node.getAttribute("data-node-id")
 $: direction = node.className.search(/flex-row|hbox/) >= 0 ? "row"
   : node.className.search(/flex-column|vbox/) >= 0 ? "column"
     : ""
+
+const icon = "w(12) font(12) text(pack) material-symbols-outlined"
 </script>
 
-<div class="node font(10) bl(#000.08) ml(14)">
-  <div class="w(hug) hbox gap(4) p(6/12) nowrap .isSelected:bg(#000.2)" class:isSelected bind:this={here}>
+<div class="node font(10) bl(#000.08) ml(14) &.isSelected:bg(#000.1)" class:isSelected>
+  <div class="hbox gap(4) p(6/12) nowrap &.isSelected:bg(#000.2)" class:isSelected bind:this={here}>
     <div class="w(12) h(12) pack ml(-6) c(#000.5) hidden pointer .isFolded:rotate(-90)"
          class:isFolded
          class:visible!={!isOnlyHasTextNode(node) && node.childNodes.length > 0}
          on:click={toggleFold}><span class="scale(.5)">▼</span>
     </div>
     {#if isOnlyHasTextNode(node)}
-      <div class="w(12) font(12) text(pack) material-symbols-outlined">title</div>
+      <div class="{icon}">title</div>
     {:else if isImage(node)}
-      <div class="w(12) font(12) text(pack) material-symbols-outlined">image</div>
+      <div class="{icon}">image</div>
     {:else if direction === "row"}
-      <div class="w(12) font(12) text(pack) material-symbols-outlined">view_column</div>
+      <div class="{icon}">view_column</div>
     {:else if direction === "column"}
-      <div class="w(12) font(12) text(pack) material-symbols-outlined">table_rows</div>
+      <div class="{icon}">table_rows</div>
     {:else}
-      <div class="w(12) font(12) text(pack) material-symbols-outlined">crop_square</div>
+      <div class="{icon}">crop_square</div>
     {/if}
 
     <div class="hover:underline pointer" on:click={selectNode}
          on:mouseover={() => hoverNode(node)}
          on:mouseleave={() => hoverNode(null)}>{isOnlyHasTextNode(node) ? node.innerText
-        : isImage(node) ? "Image"
-            : node.className}</div>
+        : node.getAttribute("data-node-name") || node.className || node.style?.cssText}</div>
   </div>
   {#if !isFolded && node.children}
     <TreeItem nodes={node.children}/>
