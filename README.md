@@ -1,47 +1,82 @@
-# Svelte + TS + Vite
+# Handshake 2.0: Figma to CSS Plugin
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+> Design to code plugin for Figma. Generate CSS from your Figma selection.
 
-## Recommended IDE Setup
+## Goal
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+AdorableCSS를 기반으로 개발하던 Handshake Plugin을 확장하여
+CSS, TailwindCSS, Styled-components 등을 지원하면서 개발자들이 원하는 형태로 디자인에서 HTML+CSS 코드를 생성할 수 있도록 개발하고자 합니다.
 
-## Need an official Svelte framework?
+아울러 Component 기능을 향상시키고 props나 Event 등을 디자인이 변경이 되어도 유지보수가 가능하도록 개선하고자 합니다.
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+---
 
-## Technical considerations
+## Introduction
 
-**Why use this over SvelteKit?**
+The plugin generates CSS from your Figma selection. It supports:
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+#### CSS Format
+- [x] CSS
+- [x] AdorableCSS
+- [x] TailwindCSS
+- [x] Styled-components
 
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+#### Template Format
+- [x] HTML
+- [ ] Svelte
+- [ ] React
 
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
 
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
+## Features
 
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
+- [x] Generate CSS from your Figma selection
+- [x] Preview HTML+CSS in browser
+- [x] Pixel perfect design to code
+- [x] Supports CSS, AdorableCSS, TailwindCSS, Styled-components
+- [ ] Supports CSS variables
 
-**Why include `.vscode/extensions.json`?**
 
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
+## Installation
 
-**Why enable `allowJs` in the TS template?**
+1. Download the [latest release](
+2. Unzip the file
+3. Double-click on `manifest.json` file
+4. Open Figma and select a frame or an element
+5. Run the plugin from the Plugins menu
+6. Enjoy 🎉
+7. If you want to update the plugin, you need to uninstall the previous version first
+8. If you want to install the plugin for all users, you need to install it manually
 
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
 
-**Why is HMR not preserving my local component state?**
+## Usage
 
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
+1. Select a frame or an element
+2. Run the plugin from the Plugins menu
+3. Select the CSS format
+4. Select the Template format
+5. Click on the `Generate` button
+6. Click on the `Preview` button
+7. Click on the `Copy` button to copy the code to the clipboard
+8. Paste the code in your editor
+9. Enjoy 🎉
 
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
 
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
-```
+## Development
+
+1. Clone the repository
+2. Install the dependencies with `npm install`
+3. Run the plugin with `npm run start:watch`
+4. Open Figma and select a frame or an element
+5. Run the plugin from the Plugins menu
+6. Enjoy 🎉
+
+
+## Author
+
+👤 **teo.yu**
+
+* Website: https://developer-1px.github.io/adorable-css/
+
+## Show your support
+
+Give a ⭐️ if this project helped you!
