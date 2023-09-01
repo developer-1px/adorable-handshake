@@ -5,8 +5,8 @@ import {getGeneratedCode} from "./codegen"
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
 
 // OPTIONS.type = "adorablecss"
-// OPTIONS.type = "tailwindcss"
-OPTIONS.type = "inlineStyle"
+OPTIONS.type = "tailwindcss"
+// OPTIONS.type = "inlineStyle"
 // OPTIONS.type = "styledComponent"
 
 let selectedFlag = false

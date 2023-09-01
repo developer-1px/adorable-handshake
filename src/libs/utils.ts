@@ -5,14 +5,14 @@ export const OPTIONS = {
   "type": "inlineStyle"
 }
 
-export const isNumber = (value) => +value === +value
-export const isValid = (value) => value === 0 || !!value
-export const px = (value) => (isNumber(value) && value !== 0) ? Math.round(value) + "px" : value
-export const percent = (value) => (isNumber(value) && value !== 0) ? makeNumber(value) + "%" : value
+export const isNumber = (value:string|number):value is number => +value === +value
+export const isValid = (value:string|number) => value === 0 || !!value
+export const px = (value:string|number) => (isNumber(value) && value !== 0) ? Math.round(value) + "px" : String(value)
+export const percent = (value:string|number) => (isNumber(value) && value !== 0) ? makeNumber(value) + "%" : String(value)
 
-export const pad = (s):string => s.length === 1 ? "0" + s : s
+export const pad = (s:string) => s.length === 1 ? "0" + s : s
 
-export const hex = (num:number):string => pad((Math.round(num * 255)).toString(16))
+export const hex = (num:number) => pad((Math.round(num * 255)).toString(16))
 
 
 export const makeInt = (num:number) => makeNumber(Math.round(num))
@@ -25,9 +25,12 @@ export const makeHexColor = (r:number, g:number, b:number, a:number = 1) => {
   return hexColor.join("")
 }
 
+const makeAdorableStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b)}${opacity === 1 ? "" : makeNumber(opacity)}`
+const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b, opacity)}${opacity === 1 ? "" : Math.round(+opacity * 255).toString(16).padStart(2, "0")}`
+
 export const makeColor = ({r, g, b}, opacity = 1) => {
-  if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
-  if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
+  // if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
+  // if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
   return makeTailwindStyleColor({r, g, b}, opacity)
 }
 
@@ -88,8 +91,8 @@ export const unitValue = ({value, unit}):string => {
   value = stripZero("" + makeNumber(value))
 
   switch (unit) {
-    case "PERCENT":
-      return value + "%"
+    case "PIXELS": {return px(value)}
+    case "PERCENT": {return percent(value)}
   }
   return value
 }

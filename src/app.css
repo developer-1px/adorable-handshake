@@ -30,6 +30,10 @@ html, body {
   display: contents;
 }
 
+.code {
+  font-family: JetBrains Mono, Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+}
+
 .Roboto {
   font-family: Roboto, system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
@@ -81,7 +85,7 @@ div:has(>.selected) > * {
 }
 
 .selected > * {
-  outline: 1px dashed #ff0000 !important;
+  outline: 1px dashed #f00 !important;
 }
 
 [class][class].hovered-guide {

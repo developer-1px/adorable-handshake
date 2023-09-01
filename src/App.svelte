@@ -111,9 +111,11 @@ const handleMouseMove = (e:MouseEvent) => {
 }
 </script>
 
+
+
 <main class="layer hbox(fill) bg(--bg) clip" style:--bg={pageBg}>
   <div class="w(200) bg(#f9f9f9) br(#000.5) c(#000) scroll">
-    <div class="ml(-20)">
+    <div class="w(hug) ml(-20)">
       <TreeItem nodes={dom} depth={0}/>
     </div>
   </div>
@@ -139,6 +141,6 @@ const handleMouseMove = (e:MouseEvent) => {
       </section>
     </div>
   </div>
-  <textarea class="w(400) h(fill) bg(#000) c(#fff) font(8/12)! monospace no-border" spellcheck="false"
+  <textarea class="w(400) h(fill) bg(#000) c(#fff) font(9/1.5)! no-border code" spellcheck="false"
             wrap="off">{scriptCode}</textarea>
 </main>
