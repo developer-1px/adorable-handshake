@@ -1,8 +1,8 @@
 {
-  "name": "Handshake 2.0.0 for linda",
+  "name": "Handshake 2.0.0",
   "api": "1.0.0",
   "id": "ce27d9c6-3887-4d85-adbc-ac04099a850f",
-  "main": "code.js",
+  "main": "plugin.js",
   "editorType": ["figma", "dev"],
   "capabilities": ["inspect", "codegen"],
   "ui": "index.html",

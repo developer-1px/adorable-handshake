@@ -1,4 +1,4 @@
-import {capitalize, fourSideValues, indent, isNumber, makeColor, makeGradientLinear, makeHexColor, makeInt, makeNumber, nl2br, percent, px, unitValue} from "../libs/utils"
+import {capitalize, indent} from "../libs/utils"
 import {getGeneratedCode as i} from "./inlineStyle";
 
 // @TODO: TBD
@@ -20,8 +20,7 @@ const createStyledComponentBuilder = ((root = [], styledMap1 = {}, styledMap2 = 
   }
 
   function addClass(prop:string, value:string) {
-    if (prop === "opacity" || prop === "z-index" || prop === "flex" || prop === "flex-shrink" || prop === "font-weight") cls.push(`${prop}:${value};`)
-    else cls.push(`${prop}:${px(value)};`)
+    cls.push(`${prop}:${value};`)
   }
 
   function generateHTML(node, content:string, tag = "div") {

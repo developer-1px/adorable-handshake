@@ -575,6 +575,7 @@ const generateText = (node:TextNode) => {
       break
 
     case "NONE":
+    case "TRUNCATE":
       addClassWidth(node, addClass)
       addClassHeight(node, addClass)
       break
@@ -622,21 +623,8 @@ const generateText = (node:TextNode) => {
     if (textAlignHorizontal !== "LEFT") {
       addClass("text-align", HORIZONTAL_ALIGN[textAlignHorizontal])
     }
-
-    // textAlign Vertical
-    if (textAutoResize === "NONE") {
-      if (textAlignVertical === "CENTER" || textAlignVertical === "BOTTOM") {
-        addClass("display", "flex")
-        addClass("flex-flow", "column")
-        if (textAlignVertical === "CENTER") {
-          addClass("justify-content", "center")
-        }
-        if (textAlignVertical === "BOTTOM") {
-          addClass("justify-content", "flex-end")
-        }
-      }
-    }
   }
+
 
   // textTruncation
   if (textTruncation === "ENDING" && maxLines >= 1) {
@@ -649,6 +637,31 @@ const generateText = (node:TextNode) => {
   else if (textAutoResize === "WIDTH_AND_HEIGHT") {
     addClass("white-space", "nowrap")
   }
+
+  // textAlign Vertical
+  if (textAutoResize === "NONE" || textAutoResize === "TRUNCATE") {
+    if (textAlignVertical === "CENTER" || textAlignVertical === "BOTTOM") {
+      if (textTruncation === "ENDING" && maxLines >= 1) {
+        if (textAlignVertical === "CENTER") {
+          addClass("-webkit-box-pack", "center")
+        }
+        if (textAlignVertical === "BOTTOM") {
+          addClass("-webkit-box-pack", "end")
+        }
+      }
+      else {
+        addClass("display", "flex")
+        addClass("flex-flow", "column")
+        if (textAlignVertical === "CENTER") {
+          addClass("justify-content", "center")
+        }
+        if (textAlignVertical === "BOTTOM") {
+          addClass("justify-content", "flex-end")
+        }
+      }
+    }
+  }
+
 
   // opacity
   if (opacity !== 1) {
@@ -706,12 +719,13 @@ const generateAsset = (node:SceneNode) => {
       node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
         .then((content) => {
           const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
-          figma.ui.postMessage({type: "assets", id: node.id, svg: inlineSVG})
+          figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
         })
         .catch(e => {
           console.warn("export failed: ", e)
         })
     }
+
     code = generateHTML(node, code, "figure")
   } catch (e) {
     console.error(e)
@@ -725,7 +739,6 @@ const generateCode = (node:SceneNode) => {
   if (!node.visible) return ""
 
   if (isAsset(node)) return generateAsset(node)
-  else if (node.type === "COMPONENT_SET") return generateComponentSet(node)
   else if (node.type === "TEXT") return generateText(node)
   return generateFrame(node)
 }

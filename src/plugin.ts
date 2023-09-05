@@ -4,8 +4,8 @@ import {getGeneratedCode} from "./codegen"
 
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
 
-// OPTIONS.type = "adorablecss"
-OPTIONS.type = "tailwindcss"
+OPTIONS.type = "adorablecss"
+// OPTIONS.type = "tailwindcss"
 // OPTIONS.type = "inlineStyle"
 // OPTIONS.type = "styledComponent"
 
@@ -43,7 +43,7 @@ const generateCodeWithUI = () => {
   const rect = node.absoluteBoundingBox
   const width = Math.floor(rect.width) || 0
   const height = (Math.floor(rect.height) || 0)
-  figma.ui.resize(width + 600, Math.max(600, height))
+  figma.ui.resize(width + 800, Math.max(600, height))
   // figma.ui.resize(9999, 9999)
   figma.ui.postMessage({type: "code", html, code, backgroundColor, pageBackgroundColor, width, height})
 }
@@ -64,16 +64,5 @@ else {
   figma.showUI(__html__)
   figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
-
-  figma.ui.onmessage = (message) => {
-    // if (message.type === "selectNode") {
-    //   selectedFlag = true
-    //   figma.currentPage.selection = [figma.getNodeById(message.id)].filter(Boolean)
-    // }
-    // console.log("got this from the UI", message)
-  }
-
-  setTimeout(() => {
-    void generateCodeWithUI()
-  }, 250)
+  void generateCodeWithUI()
 }

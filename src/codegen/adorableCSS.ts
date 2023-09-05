@@ -82,10 +82,15 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
         }
         return [value]
       }
+
+      case "text-decoration": {return [value]}
+      case "text-transform": {return [value]}
+
       case "color": {return ["c", value]}
       case "text-align": {return ["text", value]}
       case "white-space": {return [value]}
 
+      //
       case "position": {return [value]}
 
       case "display": {

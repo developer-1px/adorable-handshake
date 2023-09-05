@@ -91,7 +91,8 @@ const createTailwindCSSBuilder = (node:FrameNode, cls:Record<string, string> = {
 
       case "background": {return ["bg", value]}
       case "box-shadow": {return ["shadow", value]}
-      case "border-width": return ["border", value]
+      case "border-width":
+        return ["border", value]
 
       case "border-radius": {
         if (value === "0") return ["rounded-none"]
@@ -136,6 +137,9 @@ const createTailwindCSSBuilder = (node:FrameNode, cls:Record<string, string> = {
       case "line-height": {return ["leading", value]}
       case "letter-spacing": {return ["tracking", value]}
       case "white-space": {return ["whitespace-" + value]}
+
+      case "text-decoration": {return [value]}
+      case "text-transform": {return [value]}
 
       case "-webkit-line-clamp": {
         if (cls["max-w"] === "100%") delete cls["max-w"]
