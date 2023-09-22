@@ -71,7 +71,7 @@ export const makeGradientLinear = (paint:GradientPaint) => {
     y: data.m10 * param.x + data.m11 * param.y,
   }
   const rad = makeNumber((Math.atan2(rotationData.y * rotationTruthy, rotationData.x * rotationTruthy) / Math.PI) * 180)
-  const gradientColors = gradientStops.map((gradient) => `${makeColor(gradient.color, gradient.color.a)}/${makeNumber(gradient.position * 100)}%`)
+  const gradientColors = gradientStops.map((gradient) => `${makeColor(gradient.color, gradient.color.a)} ${makeNumber(gradient.position * 100)}%`)
 
   return `linear-gradient(${rad}deg,${gradientColors})`
 }

@@ -89,7 +89,6 @@ const handleMouseMove = (e:MouseEvent) => {
        on:mousemove|preventDefault|stopPropagation={handleMouseMove}
   >
     <section class="layer pack >>cursor(default)"
-             style:--bg={bg}
              style:transform-origin="0 0"
              style:transform="{zoomPanMatrix.toString()}"
              bind:this={content}
@@ -99,7 +98,8 @@ const handleMouseMove = (e:MouseEvent) => {
              on:click={selectNode}
              on:dblclick={selectNestedNode}
     >
-      <div class="relative bg(--bg) >static!+w(100%)+h(100%)"
+      <div class="relative bg(--bg) >relative!+w(100%)+h(100%)"
+           style:--bg={bg}
            style:width="{width}px"
            style:height="{height}px">{@html html}</div>
     </section>

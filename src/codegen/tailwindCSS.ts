@@ -2,6 +2,7 @@ import {getGeneratedCode as i} from "./inlineStyle";
 
 const makeTailwindValue = (value:string) => value.replace(/\s+/g, "_")
 const t = (prop:string, value:string) => {
+  prop = prop.replace(/^[_]+/g, "")
   if (!value) return prop
   if (value === "0") return prop + "-0"
   return `${prop}${value ? "-[" + makeTailwindValue(value) + "]" : ""}`
@@ -132,7 +133,7 @@ const createTailwindCSSBuilder = (node:FrameNode, cls:Record<string, string> = {
         return ["font-" + value]
       }
       case "font-size": {return ["text", value]}
-      case "color": {return ["text", value]}
+      case "color": {return ["_text", value]}
       case "text-align": {return ["text-" + value]}
       case "line-height": {return ["leading", value]}
       case "letter-spacing": {return ["tracking", value]}

@@ -1,5 +1,4 @@
 <script lang="ts">
-import TreeItem from "./TreeItem.svelte";
 import {_hoverNode, _selectNode, selectedNodeId$} from "../store/store";
 
 export let node:Element
@@ -30,7 +29,7 @@ $: isSelected = $selectedNodeId$ === node.getAttribute("data-node-id")
 
 $: direction = node.className.search(/flex-row|hbox/) >= 0 ? "row"
   : node.className.search(/flex-column|vbox/) >= 0 ? "column"
-    : ""
+    : node.style.flexFlow
 
 const icon = "w(12) font(12) text(pack) material-symbols-outlined"
 </script>
@@ -60,6 +59,8 @@ const icon = "w(12) font(12) text(pack) material-symbols-outlined"
         : node.getAttribute("data-node-name") || node.className || node.style?.cssText}</div>
   </div>
   {#if !isFolded && node.children}
-    <TreeItem nodes={node.children}/>
+    {#each Array.from(node.children).filter(c => !isTextNode(c)) as node}
+      <svelte:self {node}/>
+    {/each}
   {/if}
 </div>

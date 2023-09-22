@@ -14,18 +14,34 @@ interface StyleBuilder {
 
 let createClassBuilder:StyleBuilderFactory
 
-const createInlineStyleBuilder = (node:FrameNode|TextNode, cls:string[] = []) => {
+const createInlineStyleBuilder = (node:FrameNode|TextNode) => {
+
+  const cls = Object.create(null)
 
   function init() {}
 
   function addClass(prop:string, value:string|number) {
-    cls.push(`${prop}:${value};`)
+    if (value) {
+      cls[prop] = value
+    }
   }
 
   function generateHTML(node:FrameNode|TextNode, content:string, tag = "div") {
+    let code = ""
+    const attrForPreview = `data-node-name="${node.name}" data-node-id="${node.id}"`
+    const style = Object.entries(cls).map(([prop, value]) => `${prop}:${value};`).join(" ")
+
     if (tag === "span" && !content) return ""
-    if (tag === "span" && cls.length === 0) return content
-    return `<${tag} style="${cls.join(" ")}" data-node-name="${node.name}" data-node-id="${node.id}">${content}</${tag}>`
+    if (tag === "span" && style.length === 0) return content
+
+    if (node.type !== "TEXT" && tag !== "span") code += `\n<!-- ${node.name} -->\n`
+    if (tag === "img") {
+      const width = Math.floor(node.width) || 0
+      const height = (Math.floor(node.height) || 0)
+      code += `<img style="${style}" width="${width}" height="${height}" src="" alt="" ${attrForPreview}/>`
+    }
+    else code += `<${tag} style="${style}" ${attrForPreview}>${content}</${tag}>`
+    return code
   }
 
   return {init, addClass, generateHTML}
@@ -474,15 +490,15 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
     addClass("letter-spacing", makeNumber(letterSpacing.value / 100) + "em")
   }
 
-  // font-weight
-  if (fontWeight && fontWeight !== 400) {
-    addClass("font-weight", fontWeight)
-  }
-
   // font-family
   const fontFamily = fontName?.family
   if (fontFamily) {
     addClass("font-family", "'" + fontFamily + "'")
+  }
+
+  // font-weight
+  if (fontWeight && fontWeight !== 400) {
+    addClass("font-weight", fontWeight)
   }
 
   // text-decoration
@@ -674,7 +690,7 @@ const generateText = (node:TextNode) => {
 
     const s:Partial<StyledTextSegment> = {}
     Object.entries(segment).forEach(([key, value]) => {
-      if (key in commonFontStyle && value !== JSON.stringify(commonFontStyle[key])) {
+      if (JSON.stringify(value) !== JSON.stringify(commonFontStyle[key])) {
         s[key] = value
       }
     })
@@ -686,9 +702,13 @@ const generateText = (node:TextNode) => {
   return generateHTML(node, textContents)
 }
 
-const isAsset = (node:FrameNode) => {
+const isAsset2 = (node:SceneNode) => node.isAsset || (node.type === "GROUP" && node.children.every(isAsset2))
+
+const isAsset = (node:SceneNode) => {
   // @TODO: Vertor이지만 LINE이거나 ELLIPSE일 경우는 그릴 수 있어서 Asset가 아니어야 한다!
-  if (node.isAsset) return true
+  if (Array.isArray(node.fills) && node.fills.find(f => f.visible && f.type === "IMAGE")) return true
+  if (node.type === "ELLIPSE") return false
+  if (isAsset2(node)) return true
   if (node.findChild && node.findChild(child => child.isMask)) return true
   if (node.exportSettings && node.exportSettings.length) {
     if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
@@ -709,24 +729,40 @@ const generateAsset = (node:SceneNode) => {
       addClassPosition(node, addClass)
     }
 
-    addClassWidth(node, addClass)
-    addClassHeight(node, addClass)
+    // addClassWidth(node, addClass)
+    // addClassHeight(node, addClass)
+
     if (node.type === "ELLIPSE") {
       addClass("border-radius", "100%")
     }
 
+    // code = generateHTML(node, code, "figure")
+    //
+    // if (figma.mode !== "codegen") {
+    //   node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
+    //     .then((content) => {
+    //       const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
+    //       figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
+    //     })
+    //     .catch(e => {
+    //       console.warn("export failed: ", e)
+    //     })
+    // }
+
+
+    code = generateHTML(node, code, "img")
+
     if (figma.mode !== "codegen") {
-      node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
+      node.exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
         .then((content) => {
-          const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
-          figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
+          figma.ui.postMessage({type: "assets", id: node.id, name: node.name, png: content})
         })
         .catch(e => {
           console.warn("export failed: ", e)
         })
     }
 
-    code = generateHTML(node, code, "figure")
+
   } catch (e) {
     console.error(e)
     console.error("asset error node:", node)
@@ -747,5 +783,5 @@ export const getGeneratedCode = (node:FrameNode, builder = createInlineStyleBuil
   createClassBuilder = builder
   const {init} = createClassBuilder(node)
   init()
-  return generateCode(node)
+  return generateCode(node).trim()
 }

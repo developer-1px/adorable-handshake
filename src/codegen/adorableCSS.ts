@@ -30,16 +30,39 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
     value = String(value)
 
     // @TODO: #000a -> #000.8, #000000aa -> #000000.5
-    // value = value.replace(/#([0-9a-fA-F]{3,8})/g, (_, hex) => {
-    //   if (hex.length === 3) return "#" + hex.split("").map(h => h + h).join("")
-    //   if (hex.length === 4) return "#" + hex.split("").map(h => h + h).join("") + "ff"
-    //   if (hex.length === 6) return "#" + hex + "ff"
-    //   return "#" + hex
-    // })
+    value = value.replace(/#([0-9a-fA-F]{4,8})/g, (_, hex) => {
+      if (hex.length === 4) return "#" + hex.slice(0, 3) + (hex.slice(3).toString(10) / 255).toFixed(2).slice(1)
+      if (hex.length === 8) return "#" + hex.slice(0, 6) + (hex.slice(6).toString(10) / 255).toFixed(2).slice(1)
+      return "#" + hex
+    })
 
     switch (prop) {
-      case "top": {return ["y", value]}
-      case "left": {return ["x", value]}
+      case "left": {
+        return ["x", value]
+      }
+      case "top": {
+        if ("absolute" in cls && "x" in cls) {
+          const x = cls["x"]
+          const y = value
+          delete cls["x"]
+          return ["absolute", x + "," + y]
+        }
+        return ["y", value]
+      }
+
+      case "bottom": {
+        console.warn({cls})
+
+        // layer
+        if ("absolute" in cls && cls["x"] === "0" && cls["y"] === "0" && cls["right"] === "0" && value === "0") {
+          delete cls["absolute"]
+          delete cls["x"]
+          delete cls["y"]
+          delete cls["right"]
+          return ["layer"]
+        }
+        return [prop, value]
+      }
 
       case "width": {return ["w", value]}
       case "min-width": {return ["min-w", value]}
@@ -135,6 +158,23 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
             return [""]
           }
         }
+
+        if ("wrap" in cls) {
+          if (value === "flex-start") {
+            cls["wrap"] = "top";
+            return [""]
+          }
+          if (value === "center") {return [""]}
+          if (value === "baseline") {
+            cls["wrap"] = "baseline";
+            return [""]
+          }
+          if (value === "flex-end") {
+            cls["wrap"] = "bottom";
+            return [""]
+          }
+        }
+
         return ["items-" + value.replace(/^flex-/, "")]
       }
 
@@ -169,6 +209,22 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
           }
           if (value === "flex-end") {
             cls["vbox"] = plus("bottom", cls["vbox"]);
+            return [""]
+          }
+        }
+
+        if ("wrap" in cls) {
+          if (value === "flex-start") {return [""]}
+          if (value === "center") {
+            if (cls["wrap"] === "") {
+              delete cls["wrap"]
+              return ["pack"]
+            }
+            cls["wrap"] = plus(cls["wrap"], "center");
+            return [""]
+          }
+          if (value === "flex-end") {
+            cls["wrap"] = plus(cls["wrap"], "right");
             return [""]
           }
         }
@@ -222,12 +278,22 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
   }
 
   function generateHTML(node:SceneNode, content:string, tag = "div") {
+    let code = ""
+    const attrForPreview = ""//`data-node-name="${node.name}" data-node-id="${node.id}"`
     const classList = Object.entries(cls).map(([prop, value]) => t(prop, value)).join(" ")
 
     if (tag === "span" && !content) return ""
     if (tag === "span" && !classList) return content
 
-    return `<${tag} ${CLASS_NAME}="${classList}">${content}</${tag}>`
+    if (node.type !== "TEXT" && tag !== "span") code += `\n<!-- ${node.name} -->\n`
+    if (tag === "img") {
+      const width = Math.floor(node.width) || 0
+      const height = (Math.floor(node.height) || 0)
+      const src = `${node.name}${node.id}.png`
+      code += `<img class="${classList}" width="${width}" height="${height}" src="${src}" alt="" ${attrForPreview}/>`
+    }
+    else code += `<${tag} class="${classList}" ${attrForPreview}>${content}</${tag}>`
+    return code
   }
 
   return {root, init, addClass, generateHTML}
