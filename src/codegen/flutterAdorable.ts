@@ -1,29 +1,27 @@
 import {getGeneratedCode as i} from "./inlineStyle";
-
-const shortHex = (hex:string) => {
-  // #000000 -> #000
-  return hex.length === 6 && hex[0] === hex[1] && hex[2] === hex[3] && hex[4] === hex[5] ? hex[0] + hex[2] + hex[4] : hex
-}
 const makeAdorableValue = (value:string) => {
-  return value
+  return value.split(/[\s,/]+/).map(v => v
     .replace(/(\d+)px/g, (_, n) => n)
-    .replace(/\s+/g, "/")
-    .replace(/#([0-9a-fA-F]{4,8})/g, (_, hex) => {
-      if (hex.length === 4) return "#" + hex.slice(0, 3) + (parseInt(hex.slice(3), 16) / 255).toFixed(2).slice(1)
-      if (hex.length === 8) return "#" + shortHex(hex.slice(0, 6)) + (parseInt(hex.slice(6), 16) / 255).toFixed(2).slice(1)
+    .replace(/#([0-9a-fA-F]{3,8})/g, (_, hex) => {
+      if (hex.length === 3) return "0xff" + hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+      if (hex.length === 4) return "0x" + hex[3] + hex[3] + hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+      if (hex.length === 6) return "0xff" + hex
+      if (hex.length === 8) return "0x" + hex.slice(-2) + hex.slice(0, 6)
       return "#" + hex
-    })
+    }))
+    .map(v => +v === +v ? v : `"${v}"`)
+    .join(", ")
 }
 
 const t = (prop:string, value:string|number) => {
-  if (!value && value !== 0) return prop
+  if (!value && value !== 0) return prop + "()"
   return `${prop}${value ? "(" + makeAdorableValue(value) + ")" : ""}`
 }
 
 // @TODO: TBD
 const isReact = true
-const COMMENT_START = isReact ? "{/*" : "<!--"
-const COMMENT_END = isReact ? "*/}" : "-->"
+const COMMENT_START = "//"
+const COMMENT_END = ""
 const CLASS_NAME = isReact ? "className" : "class"
 
 const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) => (node:FrameNode, cls:Record<string, string> = {}) => {
@@ -70,12 +68,12 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       }
 
       case "width": {return ["w", value]}
-      case "min-width": {return ["min-w", value]}
-      case "max-width": {return ["max-w", value]}
+      case "min-width": {return ["minW", value]}
+      case "max-width": {return ["maxW", value]}
 
       case "height": {return ["h", value]}
-      case "min-height": {return ["min-h", value]}
-      case "max-height": {return ["max-h", value]}
+      case "min-height": {return ["minH", value]}
+      case "max-height": {return ["maxH", value]}
 
       case "background": {return ["bg", value]}
       case "padding":
@@ -89,7 +87,8 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       case "border-radius":
         return ["r", value]
 
-      case "font-family": {return ["@font", value.replace(/\s/g, "_")]}
+      // case "font-family": {return ["@font", value.replace(/\s/g, "_")]}
+      case "font-family": {return ["", ""]}
       case "font-size": {return ["font", value]}
       case "line-height": {
         if (cls["font"]) return ["font", cls["font"] + "/" + value]
@@ -264,12 +263,12 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       }
 
       case "-webkit-line-clamp": {
-        if (cls["max-w"] === "100%") delete cls["max-w"]
+        if (cls["maxW"] === "100%") delete cls["maxW"]
         delete cls["clip"]
         delete cls["-webkit-box"]
         delete cls["-webkit-box-orient"]
         delete cls["nowrap"]
-        return value === "1" ? ["nowrap..."] : ["max-lines", value]
+        return ["maxLines", value]
       }
     }
 
@@ -286,7 +285,7 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
   function generateHTML(node:SceneNode, content:string, tag = "div") {
     let code = ""
     const attrForPreview = ""//` data-node-name="${node.name}" data-node-id="${node.id}"`
-    const classList = Object.entries(cls).map(([prop, value]) => t(prop, value)).join(" ")
+    const classList = Object.entries(cls).map(([prop, value]) => t(prop, value)).join(".")
 
     if (tag === "span" && !content) return ""
     if (tag === "span" && !classList) return content
@@ -298,29 +297,21 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       const src = `${node.name}${node.id}.png`
       code += `<img ${CLASS_NAME}="${classList}" width="${width}" height="${height}" src="${src}" alt=""${attrForPreview}/>`
     }
-    else code += `<${tag} ${CLASS_NAME}="${classList}"${attrForPreview}>${content}</${tag}>`
-
-    if (tag === "img" || tag === "picture") {
-      root.push(`import ${node.name} from "src/assets/${node.name}${node.id}.png?react"`)
+    else if (node.type === "TEXT" || tag === "span") {
+      code += `div("${content}").${classList},`
     }
+    else code += `div().${classList}` + (content ? `.children([${content}]),` : ``)
+
+    // if (tag === "img" || tag === "picture") {
+    //   root.push(`import ${node.name} from "src/assets/${node.name}${node.id}.png?react"`)
+    // }
     return code
   }
 
   function build(code:string, node:FrameNode) {
-
     console.warn(root)
-
     const head = root.join("\n")
-
-    return head
-      + "\n\n"
-      + `function ${node.name}({className, ...props}) {\n`
-      + `return <>\n`
-      + code + "\n"
-      + `</>\n`
-      + `}\n`
-      + "\n\n"
-      + `export default ${node.name}`
+    return code
   }
 
   return {init, addClass, generateHTML, build}

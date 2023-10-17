@@ -1,6 +1,3 @@
-import {makeAdorableStyleColor} from "../codegen/adorableCSS";
-import {makeTailwindStyleColor} from "../codegen/tailwindCSS";
-
 export const OPTIONS = {
   "type": "inlineStyle"
 }
@@ -10,9 +7,7 @@ export const isValid = (value:string|number) => value === 0 || !!value
 export const px = (value:string|number) => (isNumber(value) && value !== 0) ? Math.round(value) + "px" : String(value)
 export const percent = (value:string|number) => (isNumber(value) && value !== 0) ? makeNumber(value) + "%" : String(value)
 
-export const pad = (s:string) => s.length === 1 ? "0" + s : s
-
-export const hex = (num:number) => pad((Math.round(num * 255)).toString(16))
+export const hex = (num:number) => Math.round(num * 255).toString(16).padStart(2, "0")
 
 
 export const makeInt = (num:number) => makeNumber(Math.round(num))
@@ -110,3 +105,5 @@ export const traverse = (node, callback) => {
     node.children.forEach(child => traverse(child, callback))
   }
 }
+
+export const makeComponentName = (str:string) => capitalize(str.trim().replace(/[^_a-zA-Z0-9ㄱ-ㅎ가-힣]/g, "").replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))

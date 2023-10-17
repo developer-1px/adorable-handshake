@@ -12,17 +12,17 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@figma/plugin-typings": "^1.74.0",
-    "@sveltejs/vite-plugin-svelte": "^2.4.5",
-    "@tsconfig/svelte": "^5.0.0",
-    "adorable-css": "1.4.4",
+    "@figma/plugin-typings": "^1.78.1",
+    "@sveltejs/vite-plugin-svelte": "^2.4.6",
+    "@tsconfig/svelte": "^5.0.2",
+    "adorable-css": "1.5.2",
     "jszip": "^3.10.1",
-    "svelte": "^4.2.0",
-    "svelte-check": "^3.5.0",
-    "tslib": "^2.6.1",
+    "svelte": "^4.2.1",
+    "svelte-check": "^3.5.2",
+    "tslib": "^2.6.2",
     "tsup": "^7.2.0",
-    "typescript": "^5.1.6",
-    "vite": "^4.4.9",
+    "typescript": "^5.2.2",
+    "vite": "^4.4.10",
     "vite-plugin-singlefile": "^0.13.5"
   }
 }

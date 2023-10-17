@@ -1,9 +1,8 @@
 <script lang="ts">
-import TreeItem from "./components/TreeItem.svelte";
 import Preview from "./components/Preview/Preview.svelte"
-import JSZip from "jszip"
 import TreeItemItem from "./components/TreeItemItem.svelte"
 import Assets from "./components/Panel/Assets.svelte"
+import {writable} from "svelte/store"
 
 let scriptCode = ""
 let html = ""
@@ -12,7 +11,7 @@ let pageBg = "#111"
 let width = document.body.offsetWidth
 let height = document.body.offsetHeight
 
-let assetMap = {}
+const assetMap$ = writable({})
 
 window.onmessage = (event) => {
   const type = event.data?.pluginMessage?.type
@@ -20,7 +19,7 @@ window.onmessage = (event) => {
   if (type === "code") {
     console.warn("code", event.data.pluginMessage)
 
-    assetMap = {}
+    assetMap$.set({})
     const msg = event.data.pluginMessage
     const {code, backgroundColor, pageBackgroundColor, width: w, height: h} = msg
 
@@ -54,11 +53,12 @@ window.onmessage = (event) => {
       })
     }
 
-    assetMap[id] = asset
+    assetMap$.update((assetMap) => ({...assetMap, [id]: asset}))
     return
   }
 }
 
+$: assetMap = $assetMap$
 $: dom = new DOMParser().parseFromString(html, "text/html").body
 </script>
 
@@ -72,26 +72,14 @@ $: dom = new DOMParser().parseFromString(html, "text/html").body
   <Preview {pageBg} {bg} {width} {height} {html} {scriptCode}/>
 
   <div class="w(400) c(#000) scroll-y">
-    <Assets {assetMap}/>
+    <Assets assetMap={$assetMap$}/>
 
     <section class="bb(#000.05)">
       <div class="font(12) bold p(10) bb(#000.05)">Code</div>
       <div class="relative font(10/1.6) c(#000) scroll-x">
-        <div class="w(hug) p(10) code pre no-border" contenteditable="plaintext-only" spellcheck="false">{scriptCode}</div>
+        <div class="w(hug) p(10) code pre no-border" contenteditable="plaintext-only"
+             spellcheck="false">{scriptCode}</div>
       </div>
     </section>
   </div>
 </main>
-
-
-<style>
-.checkboard {
-  --size: 12px;
-  --color: rgba(0, 0, 0, .2);
-  background-color: rgba(0, 0, 0, .05);
-  background-size: var(--size) var(--size);
-  background-position: 0 0, calc(var(--size) / 2) calc(var(--size) / 2);
-  background-image: linear-gradient(45deg, var(--color) 25%, transparent 25%, transparent 75%, var(--color) 75%, var(--color)),
-  linear-gradient(45deg, var(--color) 25%, transparent 25%, transparent 75%, var(--color) 75%, var(--color));
-}
-</style>

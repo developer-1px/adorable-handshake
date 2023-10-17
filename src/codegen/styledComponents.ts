@@ -1,4 +1,4 @@
-import {capitalize, indent} from "../libs/utils"
+import {indent, makeComponentName} from "../libs/utils"
 import {getGeneratedCode as i} from "./inlineStyle";
 
 // @TODO: TBD
@@ -6,8 +6,6 @@ const isReact = false
 const CLASS_NAME = isReact ? "style" : "style"
 const COMMENT_START = isReact ? "{/*" : "<!--"
 const COMMENT_END = isReact ? "*/}" : "-->"
-
-const makeComponentName = (str:string) => capitalize(str.trim().replace(/[^_a-zA-Z0-9ㄱ-ㅎ가-힣]/g, "").replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))
 
 const prefixAddOne = (str:string) => str.replace(/(\d*)$/, (_, p1) => String(Number(p1) + 1))
 

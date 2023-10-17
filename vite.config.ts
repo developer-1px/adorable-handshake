@@ -6,6 +6,7 @@ import {viteSingleFile} from "vite-plugin-singlefile"
 export default defineConfig({
   plugins: [svelte(), viteSingleFile()],
   build: {
+    sourcemap: true,
     emptyOutDir: false,
   }
 })

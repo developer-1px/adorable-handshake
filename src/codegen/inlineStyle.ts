@@ -10,11 +10,12 @@ interface StyleBuilder {
   init:() => void
   addClass:AddClass
   generateHTML:(node:FrameNode, content:string, tag?:string) => string
+  build:(code:string, self:StyleBuilder) => string
 }
 
 let createClassBuilder:StyleBuilderFactory
 
-const createInlineStyleBuilder = (node:FrameNode|TextNode) => {
+const createInlineStyleBuilder = (node:FrameNode|TextNode):StyleBuilder => {
 
   const cls = Object.create(null)
 
@@ -44,7 +45,11 @@ const createInlineStyleBuilder = (node:FrameNode|TextNode) => {
     return code
   }
 
-  return {init, addClass, generateHTML}
+  function build(code:string) {
+    return code
+  }
+
+  return {init, addClass, generateHTML, build}
 }
 
 const addClassWidth = (node:FrameNode, addClass:AddClass) => {
@@ -729,39 +734,36 @@ const generateAsset = (node:SceneNode) => {
       addClassPosition(node, addClass)
     }
 
-    // addClassWidth(node, addClass)
-    // addClassHeight(node, addClass)
-
-    if (node.type === "ELLIPSE") {
-      addClass("border-radius", "100%")
-    }
-
-    // code = generateHTML(node, code, "figure")
-    //
-    // if (figma.mode !== "codegen") {
-    //   node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
-    //     .then((content) => {
-    //       const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
-    //       figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
-    //     })
-    //     .catch(e => {
-    //       console.warn("export failed: ", e)
-    //     })
-    // }
-
-
-    code = generateHTML(node, code, "img")
+    const isVector = !(node.findChild && node.findChild(child => child.fills && child.fills.find(f => f.visible && f.type === "IMAGE")))
 
     if (figma.mode !== "codegen") {
-      node.exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
-        .then((content) => {
-          figma.ui.postMessage({type: "assets", id: node.id, name: node.name, png: content})
-        })
-        .catch(e => {
-          console.warn("export failed: ", e)
-        })
+      if (isVector) {
+        addClassWidth(node, addClass)
+        addClassHeight(node, addClass)
+        if (node.type === "ELLIPSE") {
+          addClass("border-radius", "100%")
+        }
+
+        node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
+          .then((content) => {
+            const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
+            figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
+          })
+          .catch(e => {
+            console.warn("export failed: ", e)
+          })
+      } else {
+        node.exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
+          .then((content) => {
+            figma.ui.postMessage({type: "assets", id: node.id, name: node.name, png: content})
+          })
+          .catch(e => {
+            console.warn("export failed: ", e)
+          })
+      }
     }
 
+    code = generateHTML(node, code, isVector ? "picture" : "img")
 
   } catch (e) {
     console.error(e)
@@ -773,15 +775,15 @@ const generateAsset = (node:SceneNode) => {
 
 const generateCode = (node:SceneNode) => {
   if (!node.visible) return ""
-
-  if (isAsset(node)) return generateAsset(node)
+  else if (isAsset(node)) return generateAsset(node)
   else if (node.type === "TEXT") return generateText(node)
   return generateFrame(node)
 }
 
-export const getGeneratedCode = (node:FrameNode, builder = createInlineStyleBuilder) => {
-  createClassBuilder = builder
-  const {init} = createClassBuilder(node)
-  init()
-  return generateCode(node).trim()
+export const getGeneratedCode = (node:FrameNode, builderFactory = createInlineStyleBuilder) => {
+  createClassBuilder = builderFactory
+  const builder = createClassBuilder(node)
+  builder?.init()
+  const code = generateCode(node).trim()
+  return builder?.build(code, node)
 }
