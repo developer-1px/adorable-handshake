@@ -1,5 +1,4 @@
-import {getGeneratedCode as i} from "./inlineStyle"
-import {makeFileName} from "../libs/utils"
+import {getGeneratedCode as i} from "./inlineStyle";
 
 const shortHex = (hex:string) => {
   // #000000 -> #000
@@ -22,7 +21,7 @@ const t = (prop:string, value:string|number) => {
 }
 
 // @TODO: TBD
-const isReact = false
+const isReact = true;
 const COMMENT_START = isReact ? "{/*" : "<!--"
 const COMMENT_END = isReact ? "*/}" : "-->"
 const CLASS_NAME = isReact ? "className" : "class"
@@ -79,7 +78,8 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       case "max-height": {return ["max-h", value]}
 
       case "background": {return ["bg", value]}
-      case "padding": {return ["p", value]}
+      case "padding":
+        return ["p", value]
 
       case "border": {
         return ["b", value.split(" ").filter(v => v !== "1px" && v !== "solid").join(" ")]
@@ -136,47 +136,47 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       case "align-items": {
         if ("hbox" in cls) {
           if (value === "flex-start") {
-            cls["hbox"] = "top"
+            cls["hbox"] = "top";
             return [""]
           }
           if (value === "center") {return [""]}
           if (value === "baseline") {
-            cls["hbox"] = "baseline"
+            cls["hbox"] = "baseline";
             return [""]
           }
           if (value === "flex-end") {
-            cls["hbox"] = "bottom"
+            cls["hbox"] = "bottom";
             return [""]
           }
         }
 
         if ("vbox" in cls) {
           if (value === "flex-start") {
-            cls["vbox"] = "left"
+            cls["vbox"] = "left";
             return [""]
           }
           if (value === "center") {
-            cls["vbox"] = "center"
+            cls["vbox"] = "center";
             return [""]
           }
           if (value === "flex-end") {
-            cls["vbox"] = "right"
+            cls["vbox"] = "right";
             return [""]
           }
         }
 
         if ("wrap" in cls) {
           if (value === "flex-start") {
-            cls["wrap"] = "top"
+            cls["wrap"] = "top";
             return [""]
           }
           if (value === "center") {return [""]}
           if (value === "baseline") {
-            cls["wrap"] = "baseline"
+            cls["wrap"] = "baseline";
             return [""]
           }
           if (value === "flex-end") {
-            cls["wrap"] = "bottom"
+            cls["wrap"] = "bottom";
             return [""]
           }
         }
@@ -194,11 +194,11 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
               delete cls["hbox"]
               return ["pack"]
             }
-            cls["hbox"] = plus(cls["hbox"], "center")
+            cls["hbox"] = plus(cls["hbox"], "center");
             return [""]
           }
           if (value === "flex-end") {
-            cls["hbox"] = plus(cls["hbox"], "right")
+            cls["hbox"] = plus(cls["hbox"], "right");
             return [""]
           }
         }
@@ -214,7 +214,7 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
             return [""]
           }
           if (value === "flex-end") {
-            cls["vbox"] = plus("bottom", cls["vbox"])
+            cls["vbox"] = plus("bottom", cls["vbox"]);
             return [""]
           }
         }
@@ -226,11 +226,11 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
               delete cls["wrap"]
               return ["pack"]
             }
-            cls["wrap"] = plus(cls["wrap"], "center")
+            cls["wrap"] = plus(cls["wrap"], "center");
             return [""]
           }
           if (value === "flex-end") {
-            cls["wrap"] = plus(cls["wrap"], "right")
+            cls["wrap"] = plus(cls["wrap"], "right");
             return [""]
           }
         }
@@ -271,19 +271,6 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
         delete cls["nowrap"]
         return value === "1" ? ["nowrap..."] : ["max-lines", value]
       }
-
-      case "-webkit-background-clip": {
-        // @TODO:
-        const color = cls["bg"]
-        delete cls["bg"]
-        delete cls["-webkit-background-clip"]
-        delete cls["-webkit-text-fill-color"]
-        return ["c", color]
-      }
-
-      case "filter": {
-        return [value]
-      }
     }
 
     return [prop, value]
@@ -308,19 +295,14 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
     if (tag === "img") {
       const width = Math.floor(node.width) || 0
       const height = Math.floor(node.height) || 0
-      const src = makeFileName(`${node.name}${node.id}.png`)
+      const src = `${node.name}${node.id}.png`
       code += `<img ${CLASS_NAME}="${classList}" width="${width}" height="${height}" src="${src}" alt=""${attrForPreview}/>`
-    }
-    else if (tag === "picture") {
-      const width = Math.floor(node.width) || 0
-      const height = Math.floor(node.height) || 0
-      const src = makeFileName(`${node.name}${node.id}.svg`)
-      code += `<${tag} ${CLASS_NAME}="${classList} pack"${attrForPreview}>\n`
-      code += `  <img width="${width}" height="${height}" src="${src}" alt=""${attrForPreview}/>\n`
-      code += `</${tag}>\n`
     }
     else code += `<${tag} ${CLASS_NAME}="${classList}"${attrForPreview}>${content}</${tag}>`
 
+    if (tag === "img" || tag === "picture") {
+      root.push(`import ${node.name} from "src/assets/${node.name}${node.id}.png?react"`)
+    }
     return code
   }
 
@@ -330,7 +312,15 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
 
     const head = root.join("\n")
 
-    return code
+    return head
+      + "\n\n"
+      + `function ${node.name}({className, ...props}) {\n`
+      + `return <>\n`
+      + code + "\n"
+      + `</>\n`
+      + `}\n`
+      + "\n\n"
+      + `export default ${node.name}`
   }
 
   return {init, addClass, generateHTML, build}

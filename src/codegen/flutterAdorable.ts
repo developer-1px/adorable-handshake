@@ -295,7 +295,7 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
       const width = Math.floor(node.width) || 0
       const height = Math.floor(node.height) || 0
       const src = `${node.name}${node.id}.png`
-      code += `<img ${CLASS_NAME}="${classList}" width="${width}" height="${height}" src="${src}" alt=""${attrForPreview}/>`
+      code += `img("${src}")${classList}.w(${width}).h(${height}),`
     }
     else if (node.type === "TEXT" || tag === "span") {
       code += `div("${content}").${classList},`

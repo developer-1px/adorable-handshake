@@ -78,7 +78,7 @@ $: dom = new DOMParser().parseFromString(html, "text/html").body
       <div class="font(12) bold p(10) bb(#000.05)">Code</div>
       <div class="relative font(10/1.6) c(#000) scroll-x">
         <div class="w(hug) p(10) code pre no-border" contenteditable="plaintext-only"
-             spellcheck="false">{scriptCode}</div>
+             spellcheck="false" on:copy|stopPropagation>{scriptCode}</div>
       </div>
     </section>
   </div>

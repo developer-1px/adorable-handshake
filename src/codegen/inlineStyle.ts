@@ -174,11 +174,11 @@ const addClassPosition = (node:FrameNode, addClass:AddClass) => {
     // x: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
     switch (horizontal) {
       case "MIN": {
-        addClass("left", px(x));
+        addClass("left", px(x))
         break
       }
       case "MAX": {
-        addClass("right", px(right));
+        addClass("right", px(right))
         break
       }
       case "CENTER": {
@@ -200,11 +200,11 @@ const addClassPosition = (node:FrameNode, addClass:AddClass) => {
     // y: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
     switch (vertical) {
       case "MIN": {
-        addClass("top", px(y));
+        addClass("top", px(y))
         break
       }
       case "MAX": {
-        addClass("bottom", px(bottom));
+        addClass("bottom", px(bottom))
         break
       }
       case "CENTER": {
@@ -306,20 +306,18 @@ const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
   }
 }
 
-const addClassBackground = (node:FrameNode, addClass:AddClass) => {
-  if (!Array.isArray(node.fills)) {
-    return
+const makeColorFromFill = (fills:any[]) => {
+  if (!Array.isArray(fills)) {
+    return ""
   }
 
-  const fills = [...node.fills].reverse().filter(fill => fill.visible)
+  fills = [...fills].reverse().filter(fill => fill.visible)
   if (fills.length === 0) {
-    return
+    return ""
   }
-
-  // @TODO: Image
 
   // multiple backgrounds -> mix!
-  const gradients = fills.map((fill, index, A) => {
+  return fills.map((fill, index, A) => {
     if (fill.type === "SOLID" && index === A.length - 1) {
       return makeColor(fill.color, fill.opacity)
     }
@@ -331,19 +329,31 @@ const addClassBackground = (node:FrameNode, addClass:AddClass) => {
     }
     return ""
   }).filter(isValid).join(",")
+}
 
-  addClass("background", gradients)
+const addClassBackground = (node:FrameNode, addClass:AddClass) => {
+  const colors = makeColorFromFill(node.fills)
+  if (colors) {
+    addClass("background", colors)
+  }
 }
 
 
 const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => {
+
+  console.warn(">>>>>>>>>>>>>>>>>>>>>>>>")
+  console.warn(node)
+
   if (node.type === "ELLIPSE") {
     addClass("border-radius", "100%")
     return
   }
 
-  const {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius} = node
-  if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
+  const {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius, cornerRadius} = node
+  if (typeof cornerRadius === "number" && cornerRadius > 0) {
+    addClass("border-radius", px(cornerRadius))
+  }
+  else if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
     addClass("border-radius", fourSideValues(topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius).map(px).join(" "))
   }
 }
@@ -521,7 +531,7 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
   // textCase
   switch (textCase) {
     case "UPPER": {
-      addClass("text-transform", "uppercase");
+      addClass("text-transform", "uppercase")
       break
     }
     case "LOWER": {
@@ -563,9 +573,14 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
   // }
 
   // color
-  const fill = fills?.find(fill => fill?.visible && fill?.type === "SOLID")
-  if (fill) {
-    addClass("color", makeColor(fill.color, fill.opacity))
+  const colors = makeColorFromFill(fills)
+  if (colors.startsWith("linear-gradient")) {
+    addClass("background", colors)
+    addClass("-webkit-background-clip", "text")
+    addClass("-webkit-text-fill-color", "transparent")
+  }
+  else if (colors) {
+    addClass("color", colors)
   }
 }
 
@@ -715,7 +730,7 @@ const isAsset = (node:SceneNode) => {
   if (node.type === "ELLIPSE") return false
   if (isAsset2(node)) return true
   if (node.findChild && node.findChild(child => child.isMask)) return true
-  if (node.exportSettings && node.exportSettings.length) {
+  if (node.exportSettings && node.exportSettings.find(e => e.format === "SVG" || e.format === "PNG")) {
     if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
       return false
     }
@@ -752,7 +767,8 @@ const generateAsset = (node:SceneNode) => {
           .catch(e => {
             console.warn("export failed: ", e)
           })
-      } else {
+      }
+      else {
         node.exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
           .then((content) => {
             figma.ui.postMessage({type: "assets", id: node.id, name: node.name, png: content})

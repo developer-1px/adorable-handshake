@@ -32,8 +32,9 @@ img {
   outline:0;
 }
 
-textarea {
-  font: inherit;
+button {
+  outline: none;
+  border: 0;
 }
 
 #app {

@@ -15,8 +15,8 @@ devDependencies:
     specifier: ^5.0.2
     version: 5.0.2
   adorable-css:
-    specifier: 1.5.2
-    version: 1.5.2(typescript@5.2.2)
+    specifier: 1.5.6
+    version: 1.5.6(typescript@5.2.2)
   jszip:
     specifier: ^3.10.1
     version: 3.10.1
@@ -363,8 +363,8 @@ packages:
     hasBin: true
     dev: true
 
-  /adorable-css@1.5.2(typescript@5.2.2):
-    resolution: {integrity: sha512-ZUvMfD6y5IUxf9IraOEne0vW7hSLfQ4wlwatkpgX4zOOAaOZbYqqOonNBVyU+CrhgGosv0U/5n+bez3Vdnaw/g==}
+  /adorable-css@1.5.6(typescript@5.2.2):
+    resolution: {integrity: sha512-XePqhf9MDpRh2e3nsSchKCR6RuF9aUfncNUkQSgpP70zAywAoFudO8B+4xuNIdg2eFAodrahU+BFVJ+9eTWDDA==}
     hasBin: true
     dependencies:
       tsup: 7.2.0(typescript@5.2.2)

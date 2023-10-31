@@ -2,6 +2,8 @@ export const OPTIONS = {
   "type": "inlineStyle"
 }
 
+export const makeNumber = (num:number) => Number(num).toFixed(2).replace(/^0+|\.00$|0+$/g, "") || "0"
+
 export const isNumber = (value:string|number):value is number => +value === +value
 export const isValid = (value:string|number) => value === 0 || !!value
 export const px = (value:string|number) => (isNumber(value) && value !== 0) ? Math.round(value) + "px" : String(value)
@@ -12,8 +14,6 @@ export const hex = (num:number) => Math.round(num * 255).toString(16).padStart(2
 
 export const makeInt = (num:number) => makeNumber(Math.round(num))
 
-export const makeNumber = (num:number) => num.toFixed(2).replace(/^0+|\.00$|0+$/g, "") || "0"
-
 export const makeHexColor = (r:number, g:number, b:number, a:number = 1) => {
   let hexColor = [r, g, b].map(hex)
   if (a === 1 && hexColor.every(h => h[0] === h[1])) hexColor = hexColor.map(h => h[0])
@@ -23,7 +23,10 @@ export const makeHexColor = (r:number, g:number, b:number, a:number = 1) => {
 const makeAdorableStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b)}${opacity === 1 ? "" : makeNumber(opacity)}`
 const makeTailwindStyleColor = ({r, g, b}, opacity = 1) => `#${makeHexColor(r, g, b, opacity)}${opacity === 1 ? "" : Math.round(+opacity * 255).toString(16).padStart(2, "0")}`
 
-export const makeColor = ({r, g, b}, opacity = 1) => {
+export const makeColor = (color, opacity = 1) => {
+  if (!color) return ""
+
+  const {r, g, b} = color
   // if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
   // if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
   return makeTailwindStyleColor({r, g, b}, opacity)
@@ -83,7 +86,11 @@ export const makeFourSideValues = (t, r, b, l) => fourSideValues(t, r, b, l).joi
 export const stripZero = (value:string) => value.startsWith("0.") ? value.slice(1) : value.startsWith("-0.") ? "-" + value.slice(2) : value
 
 export const unitValue = ({value, unit}):string => {
+
+  console.warn(">>> 3")
   value = stripZero("" + makeNumber(value))
+
+  console.warn(">>> 4")
 
   switch (unit) {
     case "PIXELS": {return px(value)}
@@ -95,7 +102,7 @@ export const unitValue = ({value, unit}):string => {
 export const ab2str = (buf) => String.fromCharCode.apply(null, new Uint16Array(buf))
 export const capitalize = (str:string) => str.charAt(0).toUpperCase() + str.slice(1)
 
-export const nl2br = (str:string) => str.replace(/(\r\n|\n|\r|\u2028|\u2029)/g, '<br/>');
+export const nl2br = (str:string) => str.replace(/(\r\n|\n|\r|\u2028|\u2029)/g, "<br/>")
 
 export const indent = (code:string) => code ? "\n" + code.split("\n").map(line => "  " + line).join("\n") + "\n" : ""
 
@@ -107,3 +114,9 @@ export const traverse = (node, callback) => {
 }
 
 export const makeComponentName = (str:string) => capitalize(str.trim().replace(/[^_a-zA-Z0-9ㄱ-ㅎ가-힣]/g, "").replace(/\s*\/\s*/g, "_").replace(/-|\s+/g, "_").replace(/\s+/g, "_"))
+
+
+export const makeFileName = (str:string) => str
+  .replace(/[\/\?<>\\:\*\|":]+/g, "_")
+  .replace(/\s+/g, "_")
+  .replace(/_+/g, "_")

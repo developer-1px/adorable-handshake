@@ -4,11 +4,11 @@ import {getGeneratedCode} from "./codegen"
 
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
 
-// OPTIONS.type = "adorablecss"
-// OPTIONS.type = "tailwindcss"
 // OPTIONS.type = "inlineStyle"
+OPTIONS.type = "adorablecss"
+// OPTIONS.type = "tailwindcss"
 // OPTIONS.type = "styledComponent"
-OPTIONS.type = "flutterAdorable"
+// OPTIONS.type = "flutterAdorable"
 
 let selectedFlag = false
 
