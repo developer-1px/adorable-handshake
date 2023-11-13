@@ -57,6 +57,8 @@ const handleCopy = (e:ClipboardEvent) => {
         on:click={() => test(asset)}>
         {#if asset.svg}{@html asset.svg}{/if}
         {#if asset.src}<img src={asset.src} alt="" class="contain"/>{/if}
+
+        <span class="layer(top+right) font(8) scale(0.8) bg(#000) c(#fff) pack">{asset.svg ? 'svg' : 'png'}</span>
       </button>
     {/each}
   </div>

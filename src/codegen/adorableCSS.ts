@@ -11,8 +11,8 @@ const makeAdorableValue = (value:string) => {
     .replace(/\s+/g, "/")
     .replace(/#([0-9a-fA-F]{4,8})/g, (_, hex) => {
       if (hex.length === 4) return "#" + hex.slice(0, 3) + (parseInt(hex.slice(3), 16) / 255).toFixed(2).slice(1)
-      if (hex.length === 8) return "#" + shortHex(hex.slice(0, 6)) + (parseInt(hex.slice(6), 16) / 255).toFixed(2).slice(1)
-      return "#" + hex
+      if (hex.length === 8) return "#" + shortHex(hex.slice(0, 6)) + (parseInt(hex.slice(6), 16) / 255).toFixed(2).replace(/0$/, "").slice(1)
+        return "#" + hex
     })
 }
 
@@ -22,10 +22,12 @@ const t = (prop:string, value:string|number) => {
 }
 
 // @TODO: TBD
-const isReact = false
-const COMMENT_START = isReact ? "{/*" : "<!--"
-const COMMENT_END = isReact ? "*/}" : "-->"
-const CLASS_NAME = isReact ? "className" : "class"
+const isJSX = true
+const isClassName = false
+
+const COMMENT_START = isJSX ? "{/*" : "<!--"
+const COMMENT_END = isJSX ? "*/}" : "-->"
+const CLASS_NAME = isClassName ? "className" : "class"
 
 const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) => (node:FrameNode, cls:Record<string, string> = {}) => {
 
@@ -46,14 +48,28 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
 
     switch (prop) {
       case "left": {
+        if (value === "50%") {
+          delete cls["transform"]
+          return ["x", "center"]
+        }
+
+        if (value.startsWith("calc(50% + ")) {
+          value = value.slice("calc(50% + ".length, -1)
+          value = "center" + (value.startsWith("-") ? value : "+" + value)
+          delete cls["transform"]
+        }
         return ["x", value]
       }
       case "top": {
-        if ("absolute" in cls && "x" in cls) {
-          const x = cls["x"]
-          const y = value
-          delete cls["x"]
-          return ["absolute", x + "," + y]
+        if (value === "50%") {
+          delete cls["transform"]
+          return ["y", "center"]
+        }
+
+        if (value.startsWith("calc(50% + ")) {
+          value = value.slice("calc(50% + ".length, -1)
+          value = "center" + (value.startsWith("-") ? value : "+" + value)
+          delete cls["transform"]
         }
         return ["y", value]
       }
@@ -272,7 +288,7 @@ const createAdorableCSSBuilder = ((root = [], styledMap1 = {}, styledMap2 = {}) 
         return value === "1" ? ["nowrap..."] : ["max-lines", value]
       }
 
-      case "-webkit-background-clip": {
+      case "-webkit-text-fill-color": {
         // @TODO:
         const color = cls["bg"]
         delete cls["bg"]

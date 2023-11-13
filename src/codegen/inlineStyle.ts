@@ -749,7 +749,8 @@ const generateAsset = (node:SceneNode) => {
       addClassPosition(node, addClass)
     }
 
-    const isVector = !(node.findChild && node.findChild(child => child.fills && child.fills.find(f => f.visible && f.type === "IMAGE")))
+    const isVector = node.exportSettings.length ? node.exportSettings.find(es => es.format === "SVG")
+        : !(node.findChild && node.findChild(child => child.fills && child.fills.find(f => f.visible && f.type === "IMAGE")))
 
     if (figma.mode !== "codegen") {
       if (isVector) {
