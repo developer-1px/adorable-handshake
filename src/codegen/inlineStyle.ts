@@ -1,36 +1,48 @@
-import {fourSideValues, indent, isNumber, isValid, makeColor, makeGradientLinear, makeNumber, nl2br, percent, px, unitValue} from "../libs/utils"
+import {
+  fourSideValues,
+  indent,
+  isNumber,
+  isValid,
+  makeColor,
+  makeGradientLinear,
+  makeNumber,
+  nl2br,
+  percent,
+  px,
+  unitValue,
+} from "../libs/utils"
 
-type AddClass = (prop:string, value:string|number) => void
+type AddStyle = (prop: string, value: string | number) => void
 
-type StyleBuilderFactory = (node:FrameNode|TextNode) => StyleBuilder
-
+type StyleBuilderFactory = (node: FrameNode | TextNode) => StyleBuilder
 
 interface StyleBuilder {
-  root?:string[]
-  init:() => void
-  addClass:AddClass
-  generateHTML:(node:FrameNode, content:string, tag?:string) => string
-  build:(code:string, self:StyleBuilder) => string
+  root?: string[]
+  init: () => void
+  addStyle: AddStyle
+  generateHTML: (node: FrameNode, content: string, tag?: string) => string
+  build: (code: string, self: StyleBuilder) => string
 }
 
-let createClassBuilder:StyleBuilderFactory
+let createClassBuilder: StyleBuilderFactory
 
-const createInlineStyleBuilder = (node:FrameNode|TextNode):StyleBuilder => {
-
+const createInlineStyleBuilder = (node: FrameNode | TextNode): StyleBuilder => {
   const cls = Object.create(null)
 
   function init() {}
 
-  function addClass(prop:string, value:string|number) {
+  function addStyle(prop: string, value: string | number) {
     if (value) {
       cls[prop] = value
     }
   }
 
-  function generateHTML(node:FrameNode|TextNode, content:string, tag = "div") {
+  function generateHTML(node: FrameNode | TextNode, content: string, tag = "div") {
     let code = ""
     const attrForPreview = `data-node-name="${node.name}" data-node-id="${node.id}"`
-    const style = Object.entries(cls).map(([prop, value]) => `${prop}:${value};`).join(" ")
+    const style = Object.entries(cls)
+      .map(([prop, value]) => `${prop}:${value};`)
+      .join(" ")
 
     if (tag === "span" && !content) return ""
     if (tag === "span" && style.length === 0) return content
@@ -38,84 +50,72 @@ const createInlineStyleBuilder = (node:FrameNode|TextNode):StyleBuilder => {
     if (node.type !== "TEXT" && tag !== "span") code += `\n<!-- ${node.name} -->\n`
     if (tag === "img") {
       const width = Math.floor(node.width) || 0
-      const height = (Math.floor(node.height) || 0)
+      const height = Math.floor(node.height) || 0
       code += `<img style="${style}" width="${width}" height="${height}" src="" alt="" ${attrForPreview}/>`
-    }
-    else code += `<${tag} style="${style}" ${attrForPreview}>${content}</${tag}>`
+    } else code += `<${tag} style="${style}" ${attrForPreview}>${content}</${tag}>`
     return code
   }
 
-  function build(code:string) {
+  function build(code: string) {
     return code
   }
 
-  return {init, addClass, generateHTML, build}
+  return {init, addStyle, generateHTML, build}
 }
 
-const addClassWidth = (node:FrameNode, addClass:AddClass) => {
-  const {
-    constraints,
-    layoutSizingHorizontal,
-    absoluteRenderBounds,
-    width: _width,
-    minWidth,
-    maxWidth,
-  } = node
+const addStyleWidth = (node: FrameNode, addStyle: AddStyle) => {
+  const {constraints, layoutSizingHorizontal, absoluteRenderBounds, width: _width, minWidth, maxWidth} = node
   const {horizontal = "MIN"} = constraints ?? {}
   const width = node.type === "Text" ? absoluteRenderBounds?.width ?? _width : _width
 
-  if (isAbsoluteLayout(node) && (horizontal === "STRETCH" || horizontal === "SCALE")) {}
-  else if (layoutSizingHorizontal === "HUG") {}
-  else if (layoutSizingHorizontal === "FIXED") {addClass("width", px(width))}
-  else if (layoutSizingHorizontal === "FILL") {
-    if (node.parent.layoutMode === "HORIZONTAL") addClass("flex", 1)
-    else if (node.parent.layoutMode === "VERTICAL") addClass("align-self", "stretch")
-    else addClass("width", "100%")
+  if (isAbsoluteLayout(node) && (horizontal === "STRETCH" || horizontal === "SCALE")) {
+  } else if (layoutSizingHorizontal === "HUG") {
+  } else if (layoutSizingHorizontal === "FIXED") {
+    addStyle("width", px(width))
+  } else if (layoutSizingHorizontal === "FILL") {
+    if (node.parent.layoutMode === "HORIZONTAL") addStyle("flex", 1)
+    else if (node.parent.layoutMode === "VERTICAL") addStyle("align-self", "stretch")
+    else addStyle("width", "100%")
   }
 
-  minWidth !== null && addClass("min-width", px(minWidth))
-  maxWidth !== null && addClass("max-width", px(maxWidth))
+  minWidth !== null && addStyle("min-width", px(minWidth))
+  maxWidth !== null && addStyle("max-width", px(maxWidth))
 }
 
-const addClassHeight = (node:FrameNode, addClass:AddClass) => {
-  const {
-    constraints,
-    layoutSizingVertical,
-    height,
-    minHeight,
-    maxHeight
-  } = node
+const addStyleHeight = (node: FrameNode, addStyle: AddStyle) => {
+  const {constraints, layoutSizingVertical, height, minHeight, maxHeight} = node
   const {vertical = "MIN"} = constraints ?? {}
 
-  if (isAbsoluteLayout(node) && (vertical === "STRETCH" || vertical === "SCALE")) {}
-  else if (layoutSizingVertical === "HUG") {}
-  else if (layoutSizingVertical === "FIXED") {addClass("height", px(height))}
+  if (isAbsoluteLayout(node) && (vertical === "STRETCH" || vertical === "SCALE")) {
+  } else if (layoutSizingVertical === "HUG") {
+  } else if (layoutSizingVertical === "FIXED") {
+    addStyle("height", px(height))
+  } //
   else if (layoutSizingVertical === "FILL") {
-    if (node.parent.layoutMode === "VERTICAL") addClass("flex", 1)
-    else if (node.parent.layoutMode === "HORIZONTAL") addClass("align-self", "stretch")
-    else addClass("height", "100%")
+    if (node.parent.layoutMode === "VERTICAL") addStyle("flex", 1)
+    else if (node.parent.layoutMode === "HORIZONTAL") addStyle("align-self", "stretch")
+    else addStyle("height", "100%")
   }
 
-  minHeight !== null && addClass("min-height", px(minHeight))
-  maxHeight !== null && addClass("max-height", px(maxHeight))
+  minHeight !== null && addStyle("min-height", px(minHeight))
+  maxHeight !== null && addStyle("max-height", px(maxHeight))
 }
 
-const addClassSize = (node:FrameNode, addClass:AddClass) => {
-  addClassWidth(node, addClass)
-  addClassHeight(node, addClass)
+const addStyleSize = (node: FrameNode, addStyle: AddStyle) => {
+  addStyleWidth(node, addStyle)
+  addStyleHeight(node, addStyle)
 
-  const {
-    layoutSizingHorizontal,
-    layoutSizingVertical,
-  } = node
+  const {layoutSizingHorizontal, layoutSizingVertical} = node
 
-  if ((layoutSizingHorizontal === "FIXED" && node.parent.layoutMode === "HORIZONTAL")
-    || (layoutSizingVertical === "FIXED" && node.parent.layoutMode === "VERTICAL")) {
-    addClass("flex-shrink", "0")
+  if (
+    (layoutSizingHorizontal === "FIXED" && node.parent.layoutMode === "HORIZONTAL") ||
+    (layoutSizingVertical === "FIXED" && node.parent.layoutMode === "VERTICAL")
+  ) {
+    addStyle("flex-shrink", "0")
   }
 }
 
-const isAbsoluteLayout = (node:FrameNode) => {
+const isAbsoluteLayout = (node: FrameNode) => {
   const selection = figma.currentPage.selection
   if (node === selection[0]) {
     return false
@@ -126,13 +126,14 @@ const isAbsoluteLayout = (node:FrameNode) => {
   }
 
   if (!node.parent.layoutMode || node.parent.layoutMode === "NONE") {
+    console.log("isAbsoluteLayout", 33)
     return true
   }
 
   return false
 }
 
-const addClassPosition = (node:FrameNode, addClass:AddClass) => {
+const addStylePosition = (node: FrameNode, addStyle: AddStyle) => {
   if (isAbsoluteLayout(node)) {
     const rect1 = node.parent.absoluteBoundingBox
     const rect2 = node.absoluteBoundingBox
@@ -158,82 +159,78 @@ const addClassPosition = (node:FrameNode, addClass:AddClass) => {
     const percentBottom = (bottom / rect1.height) * 100
 
     // position: absolute
-    addClass("position", "absolute")
+    addStyle("position", "absolute")
 
     // 'CENTER' origin
     if (horizontal === "CENTER" && vertical === "CENTER") {
-      addClass("transform", "translate(-50%,-50%)")
-    }
-    else if (horizontal === "CENTER") {
-      addClass("transform", "translateX(-50%)")
-    }
-    else if (vertical === "CENTER") {
-      addClass("transform", "translateY(-50%)")
+      addStyle("transform", "translate(-50%,-50%)")
+    } else if (horizontal === "CENTER") {
+      addStyle("transform", "translateX(-50%)")
+    } else if (vertical === "CENTER") {
+      addStyle("transform", "translateY(-50%)")
     }
 
     // x: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
     switch (horizontal) {
       case "MIN": {
-        addClass("left", px(x))
+        addStyle("left", px(x))
         break
       }
       case "MAX": {
-        addClass("right", px(right))
+        addStyle("right", px(right))
         break
       }
       case "CENTER": {
-        if (Math.abs(offsetXFromCenter) <= 1) addClass("left", "50%")
-        else addClass("left", `calc(50% + ${px(offsetXFromCenter)})`)
+        if (Math.abs(offsetXFromCenter) <= 1) addStyle("left", "50%")
+        else addStyle("left", `calc(50% + ${px(offsetXFromCenter)})`)
         break
       }
       case "STRETCH": {
-        addClass("left", px(x))
-        addClass("right", px(right))
+        addStyle("left", px(x))
+        addStyle("right", px(right))
         break
       }
       case "SCALE": {
-        addClass("left", percent(percentLeft))
-        addClass("right", percent(percentRight))
+        addStyle("left", percent(percentLeft))
+        addStyle("right", percent(percentRight))
       }
     }
 
     // y: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH' | 'SCALE'
     switch (vertical) {
       case "MIN": {
-        addClass("top", px(y))
+        addStyle("top", px(y))
         break
       }
       case "MAX": {
-        addClass("bottom", px(bottom))
+        addStyle("bottom", px(bottom))
         break
       }
       case "CENTER": {
-        if (Math.abs(offsetYFromCenter) <= 1) addClass("top", "50%")
-        else addClass("top", `calc(50% + ${px(offsetYFromCenter)})`)
+        if (Math.abs(offsetYFromCenter) <= 1) addStyle("top", "50%")
+        else addStyle("top", `calc(50% + ${px(offsetYFromCenter)})`)
         break
       }
       case "STRETCH": {
-        addClass("top", px(y))
-        addClass("bottom", px(bottom))
+        addStyle("top", px(y))
+        addStyle("bottom", px(bottom))
         break
       }
       case "SCALE": {
-        addClass("top", percent(percentTop))
-        addClass("bottom", percent(percentBottom))
+        addStyle("top", percent(percentTop))
+        addStyle("bottom", percent(percentBottom))
       }
     }
     return
   }
 
-  if (node.findChild && node.findChild(child => isAbsoluteLayout(child))) {
-    addClass("position", "relative")
+  if (node.findChild && node.findChild((child) => isAbsoluteLayout(child))) {
+    addStyle("position", "relative")
   }
 }
 
-
 // Flex Layout
-const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
-
+const addStyleFlexbox = (node: FrameNode, addStyle: AddStyle) => {
   const {
     layoutMode,
     layoutWrap,
@@ -242,12 +239,15 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
     counterAxisAlignItems,
 
     itemSpacing,
-    paddingTop, paddingRight, paddingBottom, paddingLeft,
+    paddingTop,
+    paddingRight,
+    paddingBottom,
+    paddingLeft,
 
     itemReverseZIndex,
   } = node
 
-  const numChildren = node.children?.filter(child => child.visible).length
+  const numChildren = node.children?.filter((child) => child.visible).length
   const hasChildren = numChildren > 0
   const hasMoreChildren = numChildren > 1
 
@@ -256,224 +256,216 @@ const addClassFlexbox = (node:FrameNode, addClass:AddClass) => {
   }
 
   // Flow: hbox / vbox / wrap
-  addClass("display", "flex")
-  if (layoutMode === "HORIZONTAL" && layoutWrap === "WRAP") addClass("flex-flow", "wrap")
-  else if (layoutMode === "HORIZONTAL") addClass("flex-flow", "row")
-  else if (layoutMode === "VERTICAL") addClass("flex-flow", "column")
+  addStyle("display", "flex")
+  if (layoutMode === "HORIZONTAL" && layoutWrap === "WRAP") addStyle("flex-flow", "wrap")
+  else if (layoutMode === "HORIZONTAL") addStyle("flex-flow", "row")
+  else if (layoutMode === "VERTICAL") addStyle("flex-flow", "column")
 
   // Alignment: hbox / vbox / wrap
-  if (counterAxisAlignItems === "MIN") addClass("align-items", "flex-start")
-  else if (counterAxisAlignItems === "CENTER") addClass("align-items", "center")
-  else if (counterAxisAlignItems === "BASELINE") addClass("align-items", "baseline")
-  else if (counterAxisAlignItems === "MAX") addClass("align-items", "flex-end")
+  if (counterAxisAlignItems === "MIN") addStyle("align-items", "flex-start")
+  else if (counterAxisAlignItems === "CENTER") addStyle("align-items", "center")
+  else if (counterAxisAlignItems === "BASELINE") addStyle("align-items", "baseline")
+  else if (counterAxisAlignItems === "MAX") addStyle("align-items", "flex-end")
 
-  if (primaryAxisAlignItems === "MIN") addClass("justify-content", "flex-start")
-  else if (primaryAxisAlignItems === "CENTER") addClass("justify-content", "center")
-  else if (primaryAxisAlignItems === "MAX") addClass("justify-content", "flex-end")
+  if (primaryAxisAlignItems === "MIN") addStyle("justify-content", "flex-start")
+  else if (primaryAxisAlignItems === "CENTER") addStyle("justify-content", "center")
+  else if (primaryAxisAlignItems === "MAX") addStyle("justify-content", "flex-end")
 
   // Spacing: gap
   if (primaryAxisAlignItems === "SPACE_BETWEEN") {
-    addClass("justify-content", "space-between")
+    addStyle("justify-content", "space-between")
     if (numChildren === 1) {
-      addClass("justify-content", "center")
+      addStyle("justify-content", "center")
     }
-  }
+  } //
   else if (hasMoreChildren && isNumber(itemSpacing) && itemSpacing !== 0) {
-    addClass("gap", px(itemSpacing))
+    addStyle("gap", px(itemSpacing))
   }
 
   // Spacing: padding
   if (paddingTop > 0 || paddingRight > 0 || paddingBottom > 0 || paddingLeft > 0) {
-    addClass("padding", fourSideValues(paddingTop, paddingRight, paddingBottom, paddingLeft).map(px).join(" "))
+    addStyle("padding", fourSideValues(paddingTop, paddingRight, paddingBottom, paddingLeft).map(px).join(" "))
   }
 
   // AutoLayout Advanced
 
   // @TODO: First on Top
   if (itemReverseZIndex) {
-    addClass("--itemReverseZIndex", "1")
+    addStyle("--itemReverseZIndex", "1")
   }
 }
 
-const addClassOverflow = (node:FrameNode, addClass:AddClass) => {
+const addStyleOverflow = (node: FrameNode, addStyle: AddStyle) => {
   if (!node.children) {
     return
   }
 
-  const hasChildren = node.children.filter(child => child.visible).length > 0
+  const hasChildren = node.children.filter((child) => child.visible).length > 0
   if (hasChildren && node.clipsContent) {
-    addClass("overflow", "hidden")
+    addStyle("overflow", "hidden")
   }
 }
 
-const makeColorFromFill = (fills:any[]) => {
+const makeColorFromFill = (fills: any[]) => {
   if (!Array.isArray(fills)) {
     return ""
   }
 
-  fills = [...fills].reverse().filter(fill => fill.visible)
+  fills = [...fills].reverse().filter((fill) => fill.visible)
   if (fills.length === 0) {
     return ""
   }
 
   // multiple backgrounds -> mix!
-  return fills.map((fill, index, A) => {
-    if (fill.type === "SOLID" && index === A.length - 1) {
-      return makeColor(fill.color, fill.opacity)
-    }
-    if (fill.type === "SOLID") {
-      return `linear-gradient(0deg,${makeColor(fill.color, fill.opacity)} 0%,${makeColor(fill.color, fill.opacity)} 100%)`
-    }
-    if (fill.type === "GRADIENT_LINEAR") {
-      return makeGradientLinear(fill)
-    }
-    return ""
-  }).filter(isValid).join(",")
+  return fills
+    .map((fill, index, A) => {
+      if (fill.type === "SOLID" && index === A.length - 1) {
+        return makeColor(fill.color, fill.opacity)
+      }
+      if (fill.type === "SOLID") {
+        return `linear-gradient(0deg,${makeColor(fill.color, fill.opacity)} 0%,${makeColor(fill.color, fill.opacity)} 100%)`
+      }
+      if (fill.type === "GRADIENT_LINEAR") {
+        return makeGradientLinear(fill)
+      }
+      return ""
+    })
+    .filter(isValid)
+    .join(",")
 }
 
-const addClassBackground = (node:FrameNode, addClass:AddClass) => {
+const addStyleBackground = (node: FrameNode, addStyle: AddStyle) => {
   const colors = makeColorFromFill(node.fills)
   if (colors) {
-    addClass("background", colors)
+    addStyle("background", colors)
   }
 }
 
-
-const addClassBorderRadius = (node:FrameNode|EllipseNode, addClass:AddClass) => {
-
+const addStyleBorderRadius = (node: FrameNode | EllipseNode, addStyle: AddStyle) => {
   console.warn(">>>>>>>>>>>>>>>>>>>>>>>>")
   console.warn(node)
 
   if (node.type === "ELLIPSE") {
-    addClass("border-radius", "100%")
+    addStyle("border-radius", "100%")
     return
   }
 
   const {topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius, cornerRadius} = node
   if (typeof cornerRadius === "number" && cornerRadius > 0) {
-    addClass("border-radius", px(cornerRadius))
-  }
-  else if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
-    addClass("border-radius", fourSideValues(topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius).map(px).join(" "))
+    addStyle("border-radius", px(cornerRadius))
+  } else if (topLeftRadius > 0 || topRightRadius > 0 || bottomRightRadius > 0 || bottomLeftRadius > 0) {
+    addStyle("border-radius", fourSideValues(topLeftRadius, topRightRadius, bottomRightRadius, bottomLeftRadius).map(px).join(" "))
   }
 }
 
-const addClassBorder = (node:FrameNode, addClass:AddClass) => {
+const addStyleBorder = (node: FrameNode, addStyle: AddStyle) => {
   if (!Array.isArray(node.strokes)) {
     return
   }
 
-  const border = node.strokes.find(stroke => stroke.visible)
+  const border = node.strokes.find((stroke) => stroke.visible)
   if (!border) return
 
-  const {
-    dashPattern,
-    strokeWeight,
-    strokeTopWeight,
-    strokeRightWeight,
-    strokeBottomWeight,
-    strokeLeftWeight
-  } = node
+  const {dashPattern, strokeWeight, strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight} = node
 
   const borderStyle = dashPattern?.length ? "dashed" : "solid"
 
   if (typeof strokeWeight === "number" && strokeWeight >= 0) {
-    addClass("border", `${px(strokeWeight)} ${borderStyle} ${makeColor(border.color, border.opacity)}`)
-  }
-  else {
-    addClass("border", `${borderStyle} ${makeColor(border.color, border.opacity)}`)
-    addClass("border-width", fourSideValues(strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight).map(px).join(" "))
+    addStyle("border", `${px(strokeWeight)} ${borderStyle} ${makeColor(border.color, border.opacity)}`)
+  } else {
+    addStyle("border", `${borderStyle} ${makeColor(border.color, border.opacity)}`)
+    addStyle("border-width", fourSideValues(strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight).map(px).join(" "))
   }
 }
 
-const addEffectClass = (node:FrameNode, addClass:AddClass) => {
+const addEffectClass = (node: FrameNode, addStyle: AddStyle) => {
   if (!Array.isArray(node.effects)) {
     return
   }
 
-  node.effects.filter(e => e.visible).forEach((effect:Effect) => {
-    switch (effect.type) {
-      case "DROP_SHADOW":
-      case "INNER_SHADOW": {
-        const {color, offset, radius, spread} = effect
-        if (spread) {
-          const {x, y} = offset
-          const inset = effect.type === "INNER_SHADOW" ? "inset" : ""
-          addClass("box-shadow", [inset, x, y, radius, spread, makeColor(color, color.a)].filter(isValid).map(px).join(" "))
+  node.effects
+    .filter((e) => e.visible)
+    .forEach((effect: Effect) => {
+      switch (effect.type) {
+        case "DROP_SHADOW":
+        case "INNER_SHADOW": {
+          const {color, offset, radius, spread} = effect
+          if (spread) {
+            const {x, y} = offset
+            const inset = effect.type === "INNER_SHADOW" ? "inset" : ""
+            addStyle("box-shadow", [inset, x, y, radius, spread, makeColor(color, color.a)].filter(isValid).map(px).join(" "))
+          }
+          break
         }
-        break
-      }
 
-      case "LAYER_BLUR": {
-        addClass("filter", "blur(" + px(effect.radius / 2) + ")")
-        break
-      }
+        case "LAYER_BLUR": {
+          addStyle("filter", "blur(" + px(effect.radius / 2) + ")")
+          break
+        }
 
-      case "BACKGROUND_BLUR": {
-        addClass("filter", "backdrop-blur(" + px(effect.radius / 2) + ")")
-        break
+        case "BACKGROUND_BLUR": {
+          addStyle("filter", "backdrop-blur(" + px(effect.radius / 2) + ")")
+          break
+        }
       }
-    }
-  })
+    })
 }
 
 // @TODO: Group에도 opacity가 있다. display:contents를 활용하는 방법을 고민해보자.
-const addOpacity = (node:FrameNode, addClass:AddClass) => {
+const addOpacity = (node: FrameNode, addStyle: AddStyle) => {
   if (node.opacity === 1) {
     return
   }
 
-  addClass("opacity", makeNumber(node.opacity))
+  addStyle("opacity", makeNumber(node.opacity))
 }
 
 // ----------------------------------------------------------------
 const generateChild = (children, callback) => {
-  const contents = (children || []).map(params => generateCode(params))
+  const contents = (children || []).map((params) => generateCode(params))
   const content = contents.filter(isValid).join("\n")
   return callback(content)
 }
 
-const generateComponentSet = (node:FrameNode) => {
-  const children = generateChild(node.children, content => content)
+const generateComponentSet = (node: FrameNode) => {
+  const children = generateChild(node.children, (content) => content)
   return `<section style="display:flex; flex-flow:column; gap:20px" data-node-id="${node.id}">\n${children}\n</section>`
 }
 
-const generateFrame = (node:FrameNode) => {
-
-  const {addClass, generateHTML} = createClassBuilder(node)
+const generateFrame = (node: FrameNode) => {
+  const {addStyle, generateHTML} = createClassBuilder(node)
 
   // Position
-  addClassPosition(node, addClass)
+  addStylePosition(node, addStyle)
 
   // Size(width x height): hug, fixed, fill
-  addClassSize(node, addClass)
+  addStyleSize(node, addStyle)
 
   // AutoLayout -> hbox / vbox / wrap
-  addClassFlexbox(node, addClass)
+  addStyleFlexbox(node, addStyle)
 
   // Fill -> Backgrounds
-  addClassBackground(node, addClass)
+  addStyleBackground(node, addStyle)
 
   // Stroke -> Border
-  addClassBorder(node, addClass)
+  addStyleBorder(node, addStyle)
 
   // Border Radius
-  addClassBorderRadius(node, addClass)
+  addStyleBorderRadius(node, addStyle)
 
   // clip: Overflow
-  addClassOverflow(node, addClass)
+  addStyleOverflow(node, addStyle)
 
   // Effects: Style
-  addEffectClass(node, addClass)
+  addEffectClass(node, addStyle)
 
   // Layer: opacity
-  addOpacity(node, addClass)
+  addOpacity(node, addStyle)
 
-  return generateChild(node.children, content => generateHTML(node, indent(content)))
+  return generateChild(node.children, (content) => generateHTML(node, indent(content)))
 }
 
-const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
-
+const addStyleFont = (node: Partial<StyledTextSegment>, addStyle: AddStyle) => {
   const {
     fontSize,
     lineHeight,
@@ -492,38 +484,38 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
 
   // font-size
   if (typeof fontSize === "number" && fontSize > 0) {
-    addClass("font-size", px(fontSize))
+    addStyle("font-size", px(fontSize))
   }
 
   // line-height
   if (lineHeight && lineHeight.unit !== "AUTO") {
-    addClass("line-height", unitValue(lineHeight))
+    addStyle("line-height", unitValue(lineHeight))
   }
 
   // letter-spacing
   if (letterSpacing && letterSpacing.value) {
-    addClass("letter-spacing", makeNumber(letterSpacing.value / 100) + "em")
+    addStyle("letter-spacing", makeNumber(letterSpacing.value / 100) + "em")
   }
 
   // font-family
   const fontFamily = fontName?.family
   if (fontFamily) {
-    addClass("font-family", "'" + fontFamily + "'")
+    addStyle("font-family", "'" + fontFamily + "'")
   }
 
   // font-weight
   if (fontWeight && fontWeight !== 400) {
-    addClass("font-weight", fontWeight)
+    addStyle("font-weight", fontWeight)
   }
 
   // text-decoration
   switch (textDecoration) {
     case "UNDERLINE": {
-      addClass("text-decoration", "underline")
+      addStyle("text-decoration", "underline")
       break
     }
     case "STRIKETHROUGH": {
-      addClass("text-decoration", "line-through")
+      addStyle("text-decoration", "line-through")
       break
     }
   }
@@ -531,24 +523,24 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
   // textCase
   switch (textCase) {
     case "UPPER": {
-      addClass("text-transform", "uppercase")
+      addStyle("text-transform", "uppercase")
       break
     }
     case "LOWER": {
-      addClass("text-transform", "lowercase")
+      addStyle("text-transform", "lowercase")
       break
     }
     case "TITLE": {
-      addClass("text-transform", "capitalize")
+      addStyle("text-transform", "capitalize")
       break
     }
     case "SMALL_CAPS": {
-      addClass("font-variant-caps", "small-caps")
+      addStyle("font-variant-caps", "small-caps")
       break
     }
     case "SMALL_CAPS_FORCED": {
-      addClass("text-transform", "capitalize")
-      addClass("font-variant-caps", "small-caps")
+      addStyle("text-transform", "capitalize")
+      addStyle("font-variant-caps", "small-caps")
       break
     }
   }
@@ -557,11 +549,11 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
   // if (listOptions && listOptions.type) {
   //   switch (listOptions.type) {
   //     case "UNORDERED": {
-  //       addClass("list-style", "disc")
+  //       addStyle("list-style", "disc")
   //       break
   //     }
   //     case "ORDERED": {
-  //       addClass("list-style", "decimal")
+  //       addStyle("list-style", "decimal")
   //       break
   //     }
   //   }
@@ -569,35 +561,27 @@ const addClassFont = (node:Partial<StyledTextSegment>, addClass:AddClass) => {
 
   // @TODO: indentation
   // if (indentation) {
-  //   addClass("text-indent", px(indentation))
+  //   addStyle("text-indent", px(indentation))
   // }
 
   // color
   const colors = makeColorFromFill(fills)
   if (colors.startsWith("linear-gradient")) {
-    addClass("background", colors)
-    addClass("-webkit-background-clip", "text")
-    addClass("-webkit-text-fill-color", "transparent")
-  }
-  else if (colors) {
-    addClass("color", colors)
+    addStyle("background", colors)
+    addStyle("-webkit-background-clip", "text")
+    addStyle("-webkit-text-fill-color", "transparent")
+  } else if (colors) {
+    addStyle("color", colors)
   }
 }
 
-const generateText = (node:TextNode) => {
-  const {addClass, generateHTML} = createClassBuilder(node)
+const generateText = (node: TextNode) => {
+  const {addStyle, generateHTML} = createClassBuilder(node)
 
   // Position
-  addClassPosition(node, addClass)
+  addStylePosition(node, addStyle)
 
-  const {
-    textAutoResize,
-    textAlignHorizontal,
-    textAlignVertical,
-    textTruncation,
-    maxLines: _maxLines,
-    opacity
-  } = node
+  const {textAutoResize, textAlignHorizontal, textAlignVertical, textTruncation, maxLines: _maxLines, opacity} = node
 
   const maxLines = _maxLines || (textTruncation === "ENDING" ? 1 : 0)
 
@@ -607,19 +591,19 @@ const generateText = (node:TextNode) => {
       break
 
     case "HEIGHT":
-      addClassWidth(node, addClass)
+      addStyleWidth(node, addStyle)
       break
 
     case "NONE":
     case "TRUNCATE":
-      addClassWidth(node, addClass)
-      addClassHeight(node, addClass)
+      addStyleWidth(node, addStyle)
+      addStyleHeight(node, addStyle)
       break
   }
 
   // Text Segment
   // @TODO: 세그먼트에서 공통은 위로 보내고 다른 점만 span에 class로 넣기 기능
-  const segments:StyledTextSegment[] = node.getStyledTextSegments([
+  const segments: StyledTextSegment[] = node.getStyledTextSegments([
     "fontSize",
     "fontName",
     "fontWeight",
@@ -636,42 +620,42 @@ const generateText = (node:TextNode) => {
   ])
 
   // @FIXME: get common segments style
-  const commonFontStyle:Partial<StyledTextSegment> = segments.length > 0 ? segments.reduce((prev, curr) => {
-    const style:Partial<StyledTextSegment> = {}
-    Object.keys(prev).forEach(key => {
-      if (JSON.stringify(prev[key]) === JSON.stringify(curr[key])) style[key] = prev[key]
-    })
-    return style
-  }) : {}
+  const commonFontStyle: Partial<StyledTextSegment> =
+    segments.length > 0
+      ? segments.reduce((prev, curr) => {
+          const style: Partial<StyledTextSegment> = {}
+          Object.keys(prev).forEach((key) => {
+            if (JSON.stringify(prev[key]) === JSON.stringify(curr[key])) style[key] = prev[key]
+          })
+          return style
+        })
+      : {}
 
-  addClassFont(commonFontStyle, addClass)
+  addStyleFont(commonFontStyle, addStyle)
 
   // textAlign
-  if (textAutoResize !== "WIDTH_AND_HEIGHT" || (textTruncation !== "ENDING" || (textTruncation === "ENDING" && maxLines > 1))) {
-
+  if (textAutoResize !== "WIDTH_AND_HEIGHT" || textTruncation !== "ENDING" || (textTruncation === "ENDING" && maxLines > 1)) {
     // textAlign Horizontal
     const HORIZONTAL_ALIGN = {
-      "LEFT": "left",
-      "CENTER": "center",
-      "RIGHT": "right",
-      "JUSTIFIED": "justify"
+      LEFT: "left",
+      CENTER: "center",
+      RIGHT: "right",
+      JUSTIFIED: "justify",
     }
     if (textAlignHorizontal !== "LEFT") {
-      addClass("text-align", HORIZONTAL_ALIGN[textAlignHorizontal])
+      addStyle("text-align", HORIZONTAL_ALIGN[textAlignHorizontal])
     }
   }
-
 
   // textTruncation
   if (textTruncation === "ENDING" && maxLines >= 1) {
-    !node.maxWidth && addClass("max-width", "100%")
-    addClass("overflow", "hidden")
-    addClass("display", "-webkit-box")
-    addClass("-webkit-box-orient", "vertical")
-    addClass("-webkit-line-clamp", maxLines)
-  }
-  else if (textAutoResize === "WIDTH_AND_HEIGHT") {
-    addClass("white-space", "nowrap")
+    !node.maxWidth && addStyle("max-width", "100%")
+    addStyle("overflow", "hidden")
+    addStyle("display", "-webkit-box")
+    addStyle("-webkit-box-orient", "vertical")
+    addStyle("-webkit-line-clamp", maxLines)
+  } else if (textAutoResize === "WIDTH_AND_HEIGHT") {
+    addStyle("white-space", "nowrap")
   }
 
   // textAlign Vertical
@@ -679,58 +663,61 @@ const generateText = (node:TextNode) => {
     if (textAlignVertical === "CENTER" || textAlignVertical === "BOTTOM") {
       if (textTruncation === "ENDING" && maxLines >= 1) {
         if (textAlignVertical === "CENTER") {
-          addClass("-webkit-box-pack", "center")
+          addStyle("-webkit-box-pack", "center")
         }
         if (textAlignVertical === "BOTTOM") {
-          addClass("-webkit-box-pack", "end")
+          addStyle("-webkit-box-pack", "end")
         }
-      }
-      else {
-        addClass("display", "flex")
-        addClass("flex-flow", "column")
+      } else {
+        addStyle("display", "flex")
+        addStyle("flex-flow", "column")
         if (textAlignVertical === "CENTER") {
-          addClass("justify-content", "center")
+          addStyle("justify-content", "center")
         }
         if (textAlignVertical === "BOTTOM") {
-          addClass("justify-content", "flex-end")
+          addStyle("justify-content", "flex-end")
         }
       }
     }
   }
 
-
   // opacity
   if (opacity !== 1) {
-    addClass("opacity", makeNumber(opacity))
+    addStyle("opacity", makeNumber(opacity))
   }
 
   // textContents
-  const textContents = segments.length === 1 ? nl2br(node.characters) : segments.map(segment => {
-    const {addClass, generateHTML} = createClassBuilder(node)
+  const textContents =
+    segments.length === 1
+      ? nl2br(node.characters)
+      : segments
+          .map((segment) => {
+            const {addStyle, generateHTML} = createClassBuilder(node)
 
-    const s:Partial<StyledTextSegment> = {}
-    Object.entries(segment).forEach(([key, value]) => {
-      if (JSON.stringify(value) !== JSON.stringify(commonFontStyle[key])) {
-        s[key] = value
-      }
-    })
-    addClassFont(s, addClass)
+            const s: Partial<StyledTextSegment> = {}
+            Object.entries(segment).forEach(([key, value]) => {
+              if (JSON.stringify(value) !== JSON.stringify(commonFontStyle[key])) {
+                s[key] = value
+              }
+            })
+            addStyleFont(s, addStyle)
 
-    return generateHTML(node, nl2br(segment.characters), "span")
-  }).join("")
+            return generateHTML(node, nl2br(segment.characters), "span")
+          })
+          .join("")
 
   return generateHTML(node, textContents)
 }
 
-const isAsset2 = (node:SceneNode) => node.isAsset || (node.type === "GROUP" && node.children.every(isAsset2))
+const isAsset2 = (node: SceneNode) => node.isAsset || (node.type === "GROUP" && node.children.every(isAsset2))
 
-const isAsset = (node:SceneNode) => {
+const isAsset = (node: SceneNode) => {
   // @TODO: Vertor이지만 LINE이거나 ELLIPSE일 경우는 그릴 수 있어서 Asset가 아니어야 한다!
-  if (Array.isArray(node.fills) && node.fills.find(f => f.visible && f.type === "IMAGE")) return true
+  if (Array.isArray(node.fills) && node.fills.find((f) => f.visible && f.type === "IMAGE")) return true
   if (node.type === "ELLIPSE") return false
   if (isAsset2(node)) return true
-  if (node.findChild && node.findChild(child => child.isMask)) return true
-  if (node.exportSettings && node.exportSettings.find(e => e.format === "SVG" || e.format === "PNG")) {
+  if (node.findChild && node.findChild((child) => child.isMask)) return true
+  if (node.exportSettings && node.exportSettings.find((e) => e.format === "SVG" || e.format === "PNG")) {
     if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
       return false
     }
@@ -739,49 +726,50 @@ const isAsset = (node:SceneNode) => {
   return false
 }
 
-const generateAsset = (node:SceneNode) => {
+const generateAsset = (node: SceneNode) => {
   let code = ""
 
-  const {addClass, generateHTML} = createClassBuilder(node)
+  const {addStyle, generateHTML} = createClassBuilder(node)
 
   try {
     if (isAbsoluteLayout(node)) {
-      addClassPosition(node, addClass)
+      addStylePosition(node, addStyle)
     }
 
-    const isVector = node.exportSettings.length ? node.exportSettings.find(es => es.format === "SVG")
-        : !(node.findChild && node.findChild(child => child.fills && child.fills.find(f => f.visible && f.type === "IMAGE")))
+    const isVector = node.exportSettings.length
+      ? node.exportSettings.find((es) => es.format === "SVG")
+      : !(node.findChild && node.findChild((child) => child.fills && child.fills.find((f) => f.visible && f.type === "IMAGE")))
 
     if (figma.mode !== "codegen") {
       if (isVector) {
-        addClassWidth(node, addClass)
-        addClassHeight(node, addClass)
+        addStyleWidth(node, addStyle)
+        addStyleHeight(node, addStyle)
         if (node.type === "ELLIPSE") {
-          addClass("border-radius", "100%")
+          addStyle("border-radius", "100%")
         }
 
-        node.exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
+        node
+          .exportAsync({format: "SVG_STRING", useAbsoluteBounds: true})
           .then((content) => {
             const inlineSVG = content.replace(/pattern\d/g, (a) => a + node.id.replace(/[^a-zA-z0-9]/g, "-")).replace(/\n/g, "")
             figma.ui.postMessage({type: "assets", id: node.id, name: node.name, svg: inlineSVG})
           })
-          .catch(e => {
+          .catch((e) => {
             console.warn("export failed: ", e)
           })
-      }
-      else {
-        node.exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
+      } else {
+        node
+          .exportAsync({format: "PNG", useAbsoluteBounds: true, constraint: {type: "SCALE", value: 2}})
           .then((content) => {
             figma.ui.postMessage({type: "assets", id: node.id, name: node.name, png: content})
           })
-          .catch(e => {
+          .catch((e) => {
             console.warn("export failed: ", e)
           })
       }
     }
 
     code = generateHTML(node, code, isVector ? "picture" : "img")
-
   } catch (e) {
     console.error(e)
     console.error("asset error node:", node)
@@ -790,17 +778,17 @@ const generateAsset = (node:SceneNode) => {
   return code
 }
 
-const generateCode = (node:SceneNode) => {
+const generateCode = (node: SceneNode) => {
   if (!node.visible) return ""
   else if (isAsset(node)) return generateAsset(node)
   else if (node.type === "TEXT") return generateText(node)
   return generateFrame(node)
 }
 
-export const getGeneratedCode = (node:FrameNode, builderFactory = createInlineStyleBuilder) => {
+export const getGeneratedCode = (node: FrameNode, builderFactory = createInlineStyleBuilder) => {
   createClassBuilder = builderFactory
   const builder = createClassBuilder(node)
-  builder?.init()
+  builder.init?.()
   const code = generateCode(node).trim()
-  return builder?.build(code, node)
+  return builder.build(code, builder)
 }

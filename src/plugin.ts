@@ -1,7 +1,6 @@
 import {makeColor, OPTIONS} from "./libs/utils"
 import {getGeneratedCode} from "./codegen"
 
-
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
 
 // OPTIONS.type = "inlineStyle"
@@ -26,7 +25,7 @@ const generateCodeWithUI = () => {
 
   // 배경색상 찾기
   const pageBackgroundColor = makeColor(figma.currentPage.backgrounds[0].color)
-  const getBackgroundColor = (node:SceneNode) => node.fills?.find(fill => fill.visible && fill.type === "SOLID")
+  const getBackgroundColor = (node: SceneNode) => node.fills?.find((fill) => fill.visible && fill.type === "SOLID")
 
   let it = node.parent
   let backgroundColor = pageBackgroundColor
@@ -43,10 +42,18 @@ const generateCodeWithUI = () => {
   // 피그마로 분석한 코드 전달 및 화면크기 조절 요청
   const rect = node.absoluteBoundingBox
   const width = Math.floor(rect.width) || 0
-  const height = (Math.floor(rect.height) || 0)
+  const height = Math.floor(rect.height) || 0
   figma.ui.resize(width + 800, Math.max(600, height))
   // figma.ui.resize(9999, 9999)
-  figma.ui.postMessage({type: "code", html, code, backgroundColor, pageBackgroundColor, width, height})
+  figma.ui.postMessage({
+    type: "code",
+    html,
+    code,
+    backgroundColor,
+    pageBackgroundColor,
+    width,
+    height,
+  })
 }
 
 // Make sure that we're in Dev Mode and running codegen
@@ -54,14 +61,15 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
   // Register a callback to the "generate" event
   figma.codegen.on("generate", async ({node}) => {
     const {title, language, code} = getGeneratedCode(node)
-    return [{
-      title,
-      language,
-      code,
-    }]
+    return [
+      {
+        title,
+        language,
+        code,
+      },
+    ]
   })
-}
-else {
+} else {
   figma.showUI(__html__)
   figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
