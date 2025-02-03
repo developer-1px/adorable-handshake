@@ -2,23 +2,42 @@ import {makeColor, OPTIONS} from "./libs/utils"
 import {getGeneratedCode} from "./codegen"
 
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
+import {addStyleFont} from "./codegen/figma2css/text/font"
 
-// OPTIONS.type = "inlineStyle"
-OPTIONS.type = "adorablecss"
+OPTIONS.type = "inlineStyle"
 // OPTIONS.type = "tailwindcss"
 // OPTIONS.type = "styledComponent"
-// OPTIONS.type = "flutterAdorable"
+// OPTIONS.type = "adorablecss"
 
 let selectedFlag = false
 
+function generateLocalTextStyles() {
+  const localTextStyles = figma.getLocalTextStyles()
+
+  if (localTextStyles.length === 0) {
+    // console.log("No local text styles found.")
+  } else {
+    // console.log("Local Text Styles:")
+    localTextStyles.forEach((style) => {
+      // addStyleFont(style)
+      // console.log("style", style.id, style.name, style)
+    })
+  }
+}
+
+//
 const generateCodeWithUI = () => {
+  // @FIXME:
+  generateLocalTextStyles()
+
+  //
   selectedFlag = false
 
   const selection = figma.currentPage.selection
   if (!selection.length) return
 
   const node = selection[0]
-  console.log("selectedNode: ", node)
+  console.warn("selectedNode: ", node)
 
   const html = getGeneratedHTML(node)
   const {code} = getGeneratedCode(node)
@@ -29,18 +48,18 @@ const generateCodeWithUI = () => {
 
   let it = node.parent
   let backgroundColor = pageBackgroundColor
-  while (it) {
-    const bg = getBackgroundColor(it)
-    if (getBackgroundColor(it)) {
-      backgroundColor = makeColor(bg.color, bg.opacity)
-      console.log(backgroundColor)
-      break
-    }
-    it = it.parent
-  }
+  // while (it) {
+  //   const bg = getBackgroundColor(it)
+  //   if (getBackgroundColor(it)) {
+  //     backgroundColor = makeColor(bg.color, bg.opacity)
+  //     console.log(backgroundColor)
+  //     break
+  //   }
+  //   it = it.parent
+  // }
 
   // 피그마로 분석한 코드 전달 및 화면크기 조절 요청
-  const rect = node.absoluteBoundingBox
+  const rect = (node.type === "COMPONENT_SET" ? node.children[0] || node : node).absoluteBoundingBox
   const width = Math.floor(rect.width) || 0
   const height = Math.floor(rect.height) || 0
   figma.ui.resize(width + 800, Math.max(600, height))
@@ -73,5 +92,23 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
   figma.showUI(__html__)
   figma.on("selectionchange", () => !selectedFlag && generateCodeWithUI())
   figma.on("documentchange", generateCodeWithUI)
+
+  generateTextStyles()
   void generateCodeWithUI()
+}
+
+//
+function generateTextStyles() {
+  const textStyles = figma.getLocalTextStyles()
+
+  const r = textStyles.map((style) => ({
+    id: style.id,
+    type: style.type,
+    name: style.name,
+    description: style.description,
+    tag: style.name.split("/")[1].split(" ")[0],
+    style: {display: "block", ...addStyleFont(style)},
+  }))
+
+  console.warn(JSON.stringify(r, null, 2))
 }

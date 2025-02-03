@@ -1,5 +1,5 @@
-import {getGeneratedCode as i} from "./inlineStyle"
-import {makeFileName} from "../libs/utils"
+import {getGeneratedCode as i} from "../inlineStyle"
+import {makeFileName} from "../../libs/utils"
 
 const shortHex = (hex: string) => {
   // #000000 -> #000

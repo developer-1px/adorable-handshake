@@ -1,4 +1,5 @@
 <script lang="ts">
+import {textStyles} from "../../mock/textStyles"
 import {_hoverNode, _selectNode} from "../../store/store"
 
 export let pageBg:string
@@ -9,6 +10,16 @@ export let html:string
 
 export let scriptCode:string
 
+const style = textStyles.map(ts => `
+<style>
+@layer base {
+${ts.tag} {
+  ${Object.entries(ts.style).map(([prop, value]) => `${prop}: ${value};`).join("\n")}
+}
+}
+}
+</style>
+`).join("\n")
 
 let content:HTMLElement
 
@@ -57,7 +68,7 @@ const handleWheel = (event) => {
     const rect = event.currentTarget.getBoundingClientRect()
     const mousePoint = new DOMPoint(pageX - rect.x, pageY - rect.y)
     const offsetPoint = zoomPanMatrix.inverse().transformPoint(mousePoint)
-    const deltaScale = 1 - event.deltaY / (Math.abs(event.deltaY) === 240 ? 200 : 500)
+    const deltaScale = 1 - event.deltaY / (Math.abs(event.deltaY) === 240 ? 240 : 100)
     if (zoomPanMatrix.a * deltaScale < 0.25) return
     if (zoomPanMatrix.a * deltaScale > 4) return
 
@@ -80,8 +91,8 @@ const handleMouseMove = (e:MouseEvent) => {
     isPanning = false
   }
 }
-</script>
 
+</script>
 
 <div class="w(fill) vbox clip bg(--bg)" style:--bg={pageBg}>
   <div class="h(fill) relative"
@@ -98,10 +109,12 @@ const handleMouseMove = (e:MouseEvent) => {
              on:click={selectNode}
              on:dblclick={selectNestedNode}
     >
-      <div class="relative bg(--bg) >relative!+w(100%)+h(100%)"
+      <div class="relative bg(--bg)"
            style:--bg={bg}
            style:width="{width}px"
-           style:height="{height}px">{@html html}</div>
+           style:height="{height}px">
+           {@html style}
+           {@html html}</div>
     </section>
   </div>
 </div>
