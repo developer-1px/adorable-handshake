@@ -1,5 +1,6 @@
 import type {Style} from "../../shared"
-import {fourSideValues, makeColor, px} from "../../../libs/utils"
+import {fourSideValues, px} from "../../../libs/utils"
+import {makeCSSColor} from "../Fill"
 
 export const getCssStyleBorder = (node: FrameNode) => {
   const res: Style = {}
@@ -15,13 +16,13 @@ export const getCssStyleBorder = (node: FrameNode) => {
   const {dashPattern, strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight, strokeAlign} = node
 
   const borderStyle = dashPattern?.length ? "dashed" : "solid"
-  const borderColor = makeColor(border.color, border.opacity)
+  const borderColor = makeCSSColor(node.strokeStyleId, node.strokes)
 
   if (strokeTopWeight === strokeRightWeight && strokeRightWeight === strokeBottomWeight && strokeBottomWeight === strokeLeftWeight) {
-    res["outline"] = `${px(strokeTopWeight)} ${borderStyle} ${borderColor}`
     if (strokeAlign !== "CENTER") {
       res["outline-offset"] = strokeAlign === "INSIDE" ? `-${px(strokeTopWeight)}` : strokeAlign === "OUTSIDE" ? px(strokeTopWeight) : "0px"
     }
+    res["outline"] = `${px(strokeTopWeight)} ${borderStyle} ${borderColor}`
   } else {
     res["border"] = `${borderStyle} ${borderColor}`
     res["border-width"] = fourSideValues(strokeTopWeight, strokeRightWeight, strokeBottomWeight, strokeLeftWeight).map(px).join(" ")

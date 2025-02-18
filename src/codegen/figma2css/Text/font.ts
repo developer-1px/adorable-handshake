@@ -1,6 +1,6 @@
 import {makeNumber, px, unitValue} from "../../../libs/utils"
 import type {Style} from "../../shared"
-import {makeColorFromFill} from "../Fill"
+import {makeCSSColor} from "../Fill"
 
 export const addStyleFont = (node: Partial<StyledTextSegment>) => {
   const res: Style = {}
@@ -117,7 +117,7 @@ export const addStyleFont = (node: Partial<StyledTextSegment>) => {
 
   // color
   if (fills) {
-    const colors = makeColorFromFill(fills)
+    const colors = makeCSSColor(fillStyleId, fills)
     if (colors.startsWith("linear-gradient")) {
       res["background"] = colors
       res["-webkit-background-clip"] = "text"

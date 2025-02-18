@@ -1,13 +1,15 @@
-import {makeColor, OPTIONS} from "./libs/utils"
-import {getGeneratedCode} from "./codegen"
+import {makeColor} from "./libs/utils"
+import {getGeneratedCode, OPTIONS} from "./codegen"
 
 import {getGeneratedCode as getGeneratedHTML} from "./codegen/inlineStyle"
-import {addStyleFont} from "./codegen/figma2css/text/font"
+import {addStyleFont} from "./codegen/figma2css/Text/font"
+import {makeCSSColor} from "./codegen/figma2css/Fill"
+import {dsl2html} from "./codegen/figmaDSL/dsl2html"
 
-OPTIONS.type = "inlineStyle"
+// OPTIONS.type = "inlineStyle"
 // OPTIONS.type = "tailwindcss"
-// OPTIONS.type = "styledComponent"
 // OPTIONS.type = "adorablecss"
+OPTIONS.type = "figmaDSL"
 
 let selectedFlag = false
 
@@ -39,24 +41,27 @@ const generateCodeWithUI = () => {
   const node = selection[0]
   console.warn("selectedNode: ", node)
 
-  const html = getGeneratedHTML(node)
+  let html = getGeneratedHTML(node)
   const {code} = getGeneratedCode(node)
+  if (OPTIONS.type === "figmaDSL") {
+    html = dsl2html(code)
+  }
 
   // 배경색상 찾기
   const pageBackgroundColor = makeColor(figma.currentPage.backgrounds[0].color)
-  const getBackgroundColor = (node: SceneNode) => node.fills?.find((fill) => fill.visible && fill.type === "SOLID")
+  const getBackgroundColor = (node: SceneNode) => node.fills?.find((fill) => fill.type === "SOLID")
 
-  let it = node.parent
+  let it = node
   let backgroundColor = pageBackgroundColor
-  // while (it) {
-  //   const bg = getBackgroundColor(it)
-  //   if (getBackgroundColor(it)) {
-  //     backgroundColor = makeColor(bg.color, bg.opacity)
-  //     console.log(backgroundColor)
-  //     break
-  //   }
-  //   it = it.parent
-  // }
+  while (it) {
+    const bg = getBackgroundColor(it)
+    console.log("backgroundColorbackgroundColor", it, bg)
+    if (bg) {
+      backgroundColor = makeCSSColor(bg.color, bg.opacity)
+      break
+    }
+    it = it.parent
+  }
 
   // 피그마로 분석한 코드 전달 및 화면크기 조절 요청
   const rect = (node.type === "COMPONENT_SET" ? node.children[0] || node : node).absoluteBoundingBox
@@ -97,6 +102,12 @@ if (figma.editorType === "dev" && figma.mode === "codegen") {
   void generateCodeWithUI()
 }
 
+figma.ui.onmessage = (msg) => {
+  if (msg.type === "resize") {
+    figma.ui.resize(msg.size.width, msg.size.height)
+  }
+}
+
 //
 function generateTextStyles() {
   const textStyles = figma.getLocalTextStyles()
@@ -106,7 +117,7 @@ function generateTextStyles() {
     type: style.type,
     name: style.name,
     description: style.description,
-    tag: style.name.split("/")[1].split(" ")[0],
+    tag: style.name.split("/")[1]?.split(" ")[0],
     style: {display: "block", ...addStyleFont(style)},
   }))
 

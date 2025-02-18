@@ -1,5 +1,5 @@
 <script lang="ts">
-import {_hoverNode, _selectNode, selectedNodeId$} from "../store/store";
+import {_hoverNode, _selectNode, selectedNodeId$} from "../store/store"
 
 export let node:Element
 
@@ -34,7 +34,7 @@ $: direction = node.className.search(/flex-row|hbox/) >= 0 ? "row"
 const icon = "w(12) font(12) text(pack) material-symbols-outlined"
 </script>
 
-<div class="node font(10) bl(#000.08) ml(14) &.isSelected:bg(#000.1)" class:isSelected>
+<div class="node code font(10) bl(#000.08) ml(4) &.isSelected:bg(#000.1)" class:isSelected>
   <div class="hbox gap(4) p(6/12) nowrap &.isSelected:bg(#000.2)" class:isSelected bind:this={here}>
     <div class="w(12) h(12) pack ml(-6) c(#000.5) hidden pointer .isFolded:rotate(-90)"
          class:isFolded

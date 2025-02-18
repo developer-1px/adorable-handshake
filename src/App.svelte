@@ -1,6 +1,8 @@
 <script lang="ts">
+import "./adorable-css@2.js"
 import Preview from "./components/Preview/Preview.svelte"
 import Assets from "./components/Panel/Assets.svelte"
+import ResizeHandle from "./components/Window/ResizeHandle.svelte"
 
 let html = $state("")
 let scriptCode = $state("")
@@ -32,6 +34,8 @@ window.onmessage = (event) => {
     const asset = event.data.pluginMessage
     const {id, svg, png} = asset
 
+    console.warn("asset", asset)
+
     if (png) {
       const blob = new Blob([png], {type: "image/png"})
       const src = window.URL.createObjectURL(blob)
@@ -53,6 +57,29 @@ window.onmessage = (event) => {
 
 const assetMap = $derived(assetMap$)
 const dom = $derived(new DOMParser().parseFromString(html, "text/html").body)
+
+
+let codeWidth = $state(400)
+
+function handleResize(e:PointerEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+
+  // drag
+  const el = e.currentTarget as HTMLElement
+
+  el.onpointermove = (e:PointerEvent) => {
+    codeWidth += -e.movementX
+  }
+
+  el.onpointerup = () => {
+    el.releasePointerCapture(e.pointerId); // 캡처 해제 추가
+    el.onpointermove = null;
+    el.onpointerup = null;
+  };
+
+  el.setPointerCapture(e.pointerId)
+}
 </script>
 
 <main class="layer hbox(fill) clip">
@@ -64,15 +91,19 @@ const dom = $derived(new DOMParser().parseFromString(html, "text/html").body)
 
   <Preview {pageBg} {bg} {width} {height} {html} {scriptCode}/>
 
-  <div class="w(400) c(#000) scroll-y">
-    <Assets {assetMap}/>
-
+  <div class="w(400) relative c(#000) scroll-y" style:width="{codeWidth}px">
     <section class="bb(#000.05)">
       <div class="font(12) bold p(10) bb(#000.05)">Code</div>
-      <div class="relative font(10/1.6) c(#000) scroll-x">
-        <div class="w(hug) p(10) code pre no-border" contenteditable="plaintext-only"
+      <div class="relative font(10/1.5) c(#000) scroll-x">
+        <div class="p(10) code pre no-border nowrap" contenteditable="plaintext-only"
              spellcheck="false" oncopy={e => e.stopPropagation()}>{scriptCode}</div>
       </div>
     </section>
+
+    <Assets {assetMap}/>
+
+    <div class="layer(left) w(8) ew-resize" onpointerdown={handleResize}></div>
   </div>
 </main>
+
+<ResizeHandle/>

@@ -67,10 +67,10 @@ export const getCssStyleFlexbox = (node: FrameNode) => {
   if (counterAxisSpacing !== null && counterAxisSpacing !== 0) {
     const gapPrimary = primaryAxisAlignItems === "SPACE_BETWEEN" ? 0 : px(itemSpacing)
     const gapCross = counterAxisAlignContent === "SPACE_BETWEEN" ? 0 : px(counterAxisSpacing)
-    if (gapCross === gapPrimary) {
-      res["gap"] = gapCross
+    if (gapPrimary === gapCross) {
+      res["gap"] = gapPrimary
     } else {
-      res["gap"] = gapCross + " " + gapPrimary
+      res["gap"] = gapPrimary + " " + gapCross
     }
 
     if (counterAxisAlignContent === "SPACE_BETWEEN") {
@@ -102,7 +102,7 @@ export const getCssStyleOverflow = (node: FrameNode) => {
   const res: Style = {}
   const hasChildren = node.children.filter((child) => child.visible).length > 0
   if (hasChildren && node.clipsContent) {
-    res.overflow = "hidden"
+    res.overflow = "clip"
   }
 
   return res

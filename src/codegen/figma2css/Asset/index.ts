@@ -2,11 +2,9 @@ import {isAbsoluteLayout, type Style} from "../../shared"
 import {getCssStylePosition} from "../Position"
 import {addStyleHeight, addStyleWidth} from "../Layout/size"
 
-export const generateAsset = (node: SceneNode, createClassBuilder) => {
+export const generateAsset = (node: SceneNode, voidTag) => {
   let code = ""
   let style: Style = {}
-
-  const {generateHTML} = createClassBuilder(node)
 
   try {
     if (isAbsoluteLayout(node)) {
@@ -46,7 +44,7 @@ export const generateAsset = (node: SceneNode, createClassBuilder) => {
       }
     }
 
-    code = generateHTML(node, style, code, isVector ? "picture" : "img")
+    code = voidTag(isVector ? "picture" : "img", {style, "data-node-id": node.id}, code)
   } catch (e) {
     console.error(e)
     console.error("asset error node:", node)

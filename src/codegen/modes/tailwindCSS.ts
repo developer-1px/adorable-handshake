@@ -29,6 +29,7 @@ function transform(prop: string, value: string | number): [string, string?] {
     case "width": {
       if (value === "100%") return ["w-full"]
       if (value === "fit-content") return ["w-fit"]
+      if (value === "max-content") return ["w-max"]
       return ["w", value]
     }
     case "min-width": {
@@ -38,9 +39,11 @@ function transform(prop: string, value: string | number): [string, string?] {
       return ["max-w", value]
     }
 
+    // height
     case "height": {
       if (value === "100%") return ["h-full"]
       if (value === "fit-content") return ["h-fit"]
+      if (value === "max-content") return ["h-max"]
       return ["h", value]
     }
     case "min-height": {
@@ -50,6 +53,7 @@ function transform(prop: string, value: string | number): [string, string?] {
       return ["max-h", value]
     }
 
+    //
     case "position": {
       return [value]
     }
@@ -58,9 +62,25 @@ function transform(prop: string, value: string | number): [string, string?] {
       return [value]
     }
 
+    // flex
     case "flex": {
       if (value === "1") return ["flex-1"]
       return ["flex", value]
+    }
+    case "flex-flow": {
+      return [
+        value
+          .split(" ")
+          .map((value) => {
+            if (value === "row") return "flex-row"
+            else if (value === "column") return "flex-col"
+            else if (value === "wrap") return "flex-wrap"
+            else if (value === "nowrap") return "flex-nowrap"
+            return ""
+          })
+          .filter(Boolean)
+          .join(" "),
+      ]
     }
     case "flex-shrink": {
       switch (value) {
@@ -73,13 +93,6 @@ function transform(prop: string, value: string | number): [string, string?] {
       }
       return ["shrink", value]
     }
-
-    case "flex-flow": {
-      if (value === "row") return ["flex-row"]
-      if (value === "column") return ["flex-col"]
-      if (value === "wrap") return ["flex-wrap"]
-      return [prop, value]
-    }
     case "align-items": {
       return ["items-" + value.replace(/^flex-/, "")]
     }
@@ -90,6 +103,7 @@ function transform(prop: string, value: string | number): [string, string?] {
       return ["justify-" + value.replace(/^flex-|^space-/, "")]
     }
 
+    // padding
     case "padding": {
       const values = String(value).split(" ")
       const [top, right, bottom, left] = values
@@ -110,6 +124,7 @@ function transform(prop: string, value: string | number): [string, string?] {
       return ["p", value]
     }
 
+    // box
     case "background": {
       return ["bg", value]
     }
@@ -158,34 +173,6 @@ function transform(prop: string, value: string | number): [string, string?] {
     case "border-width": {
       return ["border", value]
     }
-
-    // outline
-    case "outline": {
-      return [
-        value
-          .split(/\s+/)
-          .map((v) => {
-            // px -> number
-            if (v.endsWith("px")) {
-              return "outline-" + Number(v.replace("px", ""))
-            }
-            // color
-            if (v.startsWith("#")) {
-              return t("outline", v)
-            }
-
-            return "outline-" + v
-          })
-          .join(" "),
-      ]
-    }
-
-    case "outline-offset": {
-      if (value === "0") return ["outline-offset-0"]
-      if (parseInt(value) < 0) return ["-outline-offset-" + Math.abs(parseInt(value))]
-      return ["outline-offset", value]
-    }
-
     case "border-radius": {
       if (value === "0") return ["rounded-none"]
       if (value === "100%") return ["rounded-full"]
@@ -211,8 +198,33 @@ function transform(prop: string, value: string | number): [string, string?] {
       return ["rounded", value]
     }
 
+    // outline
+    case "outline": {
+      return [
+        value
+          .split(/\s+/)
+          .map((v) => {
+            // color
+            if (v.startsWith("#") || v.startsWith("var")) {
+              return t("outline", v)
+            }
+            // px -> number
+            if (v.endsWith("px")) {
+              return "outline-" + Number(v.replace("px", ""))
+            }
+            return "outline-" + v
+          })
+          .join(" "),
+      ]
+    }
+    case "outline-offset": {
+      if (value === "0") return ["outline-offset-0"]
+      if (parseInt(value) < 0) return ["-outline-offset-" + Math.abs(parseInt(value))]
+      return ["outline-offset", value]
+    }
+
+    // overflow
     case "overflow": {
-      if (value === "hidden") return ["overflow-hidden"]
       return ["overflow-" + value]
     }
 
@@ -276,13 +288,7 @@ function transform(prop: string, value: string | number): [string, string?] {
     case "text-transform": {
       return [value]
     }
-
     case "-webkit-line-clamp": {
-      // if (cls["max-w"] === "100%") delete cls["max-w"]
-      // delete cls["overflow-hidden"]
-      // delete cls["-webkit-box"]
-      // delete cls["-webkit-box-orient"]
-      // delete cls["nowrap"]
       return +value <= 6 ? ["line-clamp-" + value] : ["line-clamp", value]
     }
   }
@@ -371,17 +377,8 @@ const createTailwindCSSBuilder = (node: FrameNode) => {
   }
 
   function build(code: string) {
-    const variants = node.variantGroupProperties || {
-      style: {values: ["white"]},
-      state: {values: ["enabled", "hover"]},
-      device: {values: ["pc", "mobile"]},
-    }
-
-    console.log("variantsvariants", variants)
-    // variantGroupProperties
-
+    const variants = node.variantGroupProperties || {}
     code = [`<script setup lang="ts">\n${generateCVATemplate(variants)}\n</script>`, code].join("\n\n")
-
     return code
   }
 

@@ -3,19 +3,63 @@ import {getCssStyleBackground} from "./figma2css/Fill"
 import {getCssStyleFlexbox, getCssStyleOverflow} from "./figma2css/Layout"
 import {getCssStylePosition} from "./figma2css/Position"
 import {getCssStyleSize} from "./figma2css/Layout/size"
-import {addStyleFont} from "./figma2css/text/font"
+import {addStyleFont} from "./figma2css/Text/font"
 import {type Style} from "./shared"
 import {getCssEffectClass} from "./figma2css/Effect"
-import {textStyles} from "../mock/textStyles"
-import {getCssStyleBorder} from "./figma2css/stroke"
+import {getCssStyleBorder} from "./figma2css/Stroke"
 import {getCssOpacity, getCssStyleBorderRadius} from "./figma2css/Appearance"
 import {traverseFigmaNode, traverseParallelNodes} from "./shared/traverse"
 import {styleToTailwind} from "./modes/tailwindCSS"
-import {getCssStyleTextAlign} from "./figma2css/text/textAlign"
-import {getCssStyleTextLayout} from "./figma2css/text/textLayout"
+import {getCssStyleTextAlign} from "./figma2css/Text/textAlign"
+import {getCssStyleTextLayout} from "./figma2css/Text/textLayout"
 import {generateAsset} from "./figma2css/Asset"
 import type {SceneNode} from "@figma/plugin-typings/plugin-api-standalone"
 import {generateCVA} from "./cva"
+
+// 속성 객체를 문자열로 변환하는 헬퍼 함수
+const attributesToString = (attributes) => {
+  if (!attributes || Object.keys(attributes).length === 0) return ""
+
+  return Object.entries(attributes)
+    .map(([key, value]) => {
+      // class나 style 같은 특별한 속성들 처리
+      if (value === undefined || value === null) return ""
+      if (typeof value === "boolean" && value) return key
+      if (typeof value === "boolean" && !value) return ""
+
+      // 객체인 경우 (style 객체 등) 처리
+      if (typeof value === "object") {
+        if (key === "style") {
+          const styleString = Object.entries(value)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join("; ")
+          return `${key}="${styleString}"`
+        }
+        return `${key}='${JSON.stringify(value)}'`
+      }
+
+      return `${key}="${value}"`
+    })
+    .filter(Boolean)
+    .join(" ")
+}
+
+// 여는 태그 생성
+const openTag = (tag, attributes = {}) => {
+  const attrs = attributesToString(attributes)
+  return attrs ? `<${tag} ${attrs}>` : `<${tag}>`
+}
+
+// 닫는 태그 생성
+const closeTag = (tag) => {
+  return `</${tag}>`
+}
+
+// void 태그 생성 (자체 닫힘 태그)
+const voidTag = (tag, attributes = {}, contents = "") => {
+  const attrs = attributesToString(attributes)
+  return `<${tag} ${attrs}>${contents}</${tag}>`
+}
 
 type StyleBuilderFactory = (node: FrameNode | TextNode) => StyleBuilder
 
@@ -35,23 +79,23 @@ const createInlineStyleBuilder = (node: FrameNode | TextNode): StyleBuilder => {
     let code = ""
     const attrForPreview = `data-node-id="${node.id}"`
 
-    if (tag === "div") {
-      textStyles.forEach((ts) => {
-        const isSame = node.textStyleId?.startsWith(ts.id)
-        if (isSame) {
-          tag = ts.name.split("/")[1].split(" ")[0]
-
-          // cls에서 같은 style값이면 delete 한다.
-          Object.entries(ts.style).forEach(([prop, value]) => {
-            if (cls[prop] === value) {
-              delete cls[prop]
-            }
-          })
-
-          console.log(">>>>>>", tag, ts.name)
-        }
-      })
-    }
+    // if (tag === "div") {
+    //   textStyles.forEach((ts) => {
+    //     const isSame = node.textStyleId?.startsWith(ts.id)
+    //     if (isSame) {
+    //       tag = ts.name.split("/")[1].split(" ")[0]
+    //
+    //       // cls에서 같은 style값이면 delete 한다.
+    //       Object.entries(ts.style).forEach(([prop, value]) => {
+    //         if (cls[prop] === value) {
+    //           delete cls[prop]
+    //         }
+    //       })
+    //
+    //       console.log(">>>>>>", tag, ts.name)
+    //     }
+    //   })
+    // }
 
     const style = Object.entries(cls)
       .map(([prop, value]) => `${prop}:${value};`)
@@ -84,7 +128,6 @@ const createInlineStyleBuilder = (node: FrameNode | TextNode): StyleBuilder => {
 }
 
 // ----------------------------------------------------------------
-
 export const getCommonFontStyle = (segments: StyledTextSegment[]): Partial<StyledTextSegment> => {
   if (segments.length === 0) return {}
 
@@ -125,67 +168,6 @@ const getCssTextStyle = (node: TextNode): Style => {
   }
 }
 
-const generateText = (node: TextNode) => {
-  let res: Style = {}
-
-  // Text Segment
-  const segments: StyledTextSegment[] = getStyledTextSegments(node)
-  const commonFontStyle: Partial<StyledTextSegment> = getCommonFontStyle(segments)
-
-  // textContents
-  const textContents =
-    segments.length === 1
-      ? nl2br(node.characters)
-      : segments
-          .map((segment) => {
-            const {generateHTML} = createClassBuilder(node)
-            const s: Partial<StyledTextSegment> = {}
-            Object.entries(segment).forEach(([key, value]) => {
-              if (JSON.stringify(value) !== JSON.stringify(commonFontStyle[key])) {
-                s[key] = value
-              }
-            })
-            const res = addStyleFont(s)
-            return generateHTML(node, res, nl2br(segment.characters), "span")
-          })
-          .join("")
-
-  res = {
-    ...res,
-    ...getCssTextStyle(node),
-  }
-
-  const {generateHTML} = createClassBuilder(node)
-  return generateHTML(node, res, textContents)
-}
-
-const isAsset2 = (node: SceneNode) => node.isAsset || (node.type === "GROUP" && node.children.every(isAsset2))
-
-const isAsset = (node: SceneNode) => {
-  // @TODO: Vertor이지만 LINE이거나 ELLIPSE일 경우는 그릴 수 있어서 Asset가 아니어야 한다!
-  if (Array.isArray(node.fills) && node.fills.find((f) => f.visible && f.type === "IMAGE")) return true
-  if (node.type === "ELLIPSE") return false
-  if (isAsset2(node)) return true
-  if (node.findChild && node.findChild((child) => child.isMask)) return true
-  if (node.exportSettings && node.exportSettings.find((e) => e.format === "SVG" || e.format === "PNG")) {
-    if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
-      return false
-    }
-    return true
-  }
-  return false
-}
-
-//
-// ----------------------------------------------------------------
-const getCssStyle = (node: SceneNode) => {
-  if (node.type === "TEXT") {
-    return getCssTextStyle(node as TextNode)
-  }
-
-  return getCssBoxStyle(node as FrameNode)
-}
-
 const getCssBoxStyle = (node: FrameNode) => {
   if (!node) {
     console.error("[getCssStyle] node is null")
@@ -222,12 +204,66 @@ const getCssBoxStyle = (node: FrameNode) => {
   }
 }
 
+export const getCssStyle = (node: SceneNode) => {
+  if (node.type === "TEXT") {
+    return getCssTextStyle(node as TextNode)
+  }
+
+  return getCssBoxStyle(node as FrameNode)
+}
+
 //
 //
 // ----------------------------------------------------------------
-const extractCommonKeys = (objects: any[]): string[] =>
-  Object.keys(objects[0]).filter((key) => objects.every((obj) => obj.hasOwnProperty(key)))
+const generateText = (node: TextNode) => {
+  let res: Style = {}
 
+  // Text Segment
+  const segments: StyledTextSegment[] = getStyledTextSegments(node)
+  const commonFontStyle: Partial<StyledTextSegment> = getCommonFontStyle(segments)
+
+  // textContents
+  const textContents =
+    segments.length === 1
+      ? nl2br(node.characters)
+      : segments
+          .map((segment) => {
+            const s: Partial<StyledTextSegment> = {}
+            Object.entries(segment).forEach(([key, value]) => {
+              if (JSON.stringify(value) !== JSON.stringify(commonFontStyle[key])) {
+                s[key] = value
+              }
+            })
+            const res = addStyleFont(s)
+            return voidTag("span", {style: res}, nl2br(segment.characters))
+          })
+          .join("")
+
+  res = {
+    ...res,
+    ...getCssTextStyle(node),
+  }
+
+  return voidTag("div", {style: res}, textContents)
+}
+
+const isAsset2 = (node: SceneNode) => node.isAsset || (node.type === "GROUP" && node.children.every(isAsset2))
+
+export const isAsset = (node: SceneNode) => {
+  // @TODO: Vertor이지만 LINE이거나 ELLIPSE일 경우는 그릴 수 있어서 Asset가 아니어야 한다!
+  if (node.isAsset) return true
+  if (Array.isArray(node.fills) && node.fills.find((f) => f.visible && f.type === "IMAGE")) return true
+  if (node.type === "ELLIPSE") return false
+  if (node.exportSettings && node.exportSettings.find((e) => e.format === "SVG")) {
+    if (node.parent.type === "SECTION" || node.parent.type === "PAGE") {
+      return false
+    }
+    return true
+  }
+  return false
+}
+
+// ----------------------------------------------------------------
 const generateComponentSet = (node: SceneNode) => {
   if (node.type !== "COMPONENT_SET") {
     return ""
@@ -259,7 +295,7 @@ const generateComponentSet = (node: SceneNode) => {
     codes.push(JSON.stringify(cva, null, 2))
     // console.log("Analysis Result:", code)
 
-    if (isAsset2(nodes[0])) {
+    if (isAsset(nodes[0])) {
       return false
     }
   })
@@ -269,10 +305,6 @@ import { cva } from "class-variance-authority";
  
 ${codes.join("\n\n")}
 `.trim()
-}
-
-const camelCase = (str: string): string => {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase())
 }
 
 ///
@@ -299,8 +331,8 @@ const generateCode = (node: SceneNode) => {
     const tab = "  ".repeat(level)
 
     // ASSET
-    if (isAsset2(node)) {
-      codes.push(tab + generateAsset(node, createClassBuilder))
+    if (isAsset(node)) {
+      codes.push(tab + generateAsset(node, voidTag))
     }
     // TEXT
     else if (node.type === "TEXT") {
@@ -308,12 +340,18 @@ const generateCode = (node: SceneNode) => {
     }
     // BOX
     else {
-      const classList = getTailwindCSS(node)
+      // COMPONENT INSTANCE
+      if (node.type === "INSTANCE") {
+        codes.push(tab)
+        // codes.push(tab + `<!-- ${generateJSXFromInstance(node)} -->`)
+      }
+
+      const style = getCssStyle(node)
       codes.push(tab)
       codes.push(tab + `<!-- ${node.name} -->`)
-      codes.push(tab + `<div class="${classList}">`)
+      codes.push(tab + openTag("div", {style}))
       next()
-      codes.push(tab + "</div>")
+      codes.push(tab + closeTag("div"))
     }
   })
 

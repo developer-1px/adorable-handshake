@@ -11,14 +11,10 @@ export const makeColorFromFill = (fills: ReadonlyArray<Paint> | PluginAPI["mixed
     return ""
   }
 
-  // multiple backgrounds -> mix!
   return fills
     .map((fill, index, A) => {
-      if (fill.type === "SOLID" && index === A.length - 1) {
-        return makeColor(fill.color, fill.opacity)
-      }
       if (fill.type === "SOLID") {
-        return `linear-gradient(0deg,${makeColor(fill.color, fill.opacity)} 0%,${makeColor(fill.color, fill.opacity)} 100%)`
+        return makeColor(fill.color, fill.opacity)
       }
       if (fill.type === "GRADIENT_LINEAR") {
         return makeGradientLinear(fill)
@@ -29,13 +25,31 @@ export const makeColorFromFill = (fills: ReadonlyArray<Paint> | PluginAPI["mixed
     .join(",")
 }
 
+export const makeCSSVarName = (name: string) => {
+  return `--${name.replace(/[^a-zA-Z0-9_-]+/g, "-").toLowerCase()}`
+}
+
+export const makeVariableColor = (fillStyleId: string | PluginAPI["mixed"]): string | null => {
+  if (figma.variables && typeof fillStyleId === "string") {
+    const style = figma.getStyleById(fillStyleId)
+    if (style && style.type === "PAINT" && style.paints.length > 0) {
+      const name = makeCSSVarName(style.name)
+      const color = makeColorFromFill(style.paints)
+      return `var(${name},${color})`
+    }
+  }
+  return null
+}
+
+export const makeCSSColor = (fillStyleId: string | PluginAPI["mixed"], fills: ReadonlyArray<Paint> | PluginAPI["mixed"]) => {
+  return makeVariableColor(fillStyleId) || makeColorFromFill(fills)
+}
+
 export const getCssStyleBackground = (node: FrameNode) => {
   const res: Style = {}
-
-  const colors = makeColorFromFill(node.fills)
+  const colors = makeCSSColor(node.fillStyleId, node.fills)
   if (colors) {
     res.background = colors
   }
-
   return res
 }

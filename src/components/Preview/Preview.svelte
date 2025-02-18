@@ -109,7 +109,7 @@ const handleMouseMove = (e:MouseEvent) => {
              on:click={selectNode}
              on:dblclick={selectNestedNode}
     >
-      <div class="relative bg(--bg)"
+      <div class="relative bg(#fff)"
            style:--bg={bg}
            style:width="{width}px"
            style:height="{height}px">

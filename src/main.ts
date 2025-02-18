@@ -1,6 +1,4 @@
 import {mount} from "svelte"
-// import "adorable-css"
-import "./adorable.css"
 import "./app.css"
 import App from "./App.svelte"
 

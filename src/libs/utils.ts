@@ -1,6 +1,4 @@
-export const OPTIONS = {
-  type: "inlineStyle",
-}
+import {OPTIONS} from "../codegen"
 
 export const makeNumber = (num: number) =>
   Number(num)
@@ -18,6 +16,7 @@ export const hex = (num: number) =>
     .padStart(2, "0")
 
 export const makeInt = (num: number) => makeNumber(Math.round(num))
+export const makeIntIf = (num: number | string) => (typeof num === "string" ? num : makeNumber(Math.round(num)))
 
 export const makeHexColor = (r: number, g: number, b: number, a: number = 1) => {
   let hexColor = [r, g, b].map(hex)
@@ -39,8 +38,8 @@ export const makeColor = (color, opacity = 1) => {
   if (!color) return ""
 
   const {r, g, b} = color
-  // if (OPTIONS.type === "adorablecss") return makeAdorableStyleColor({r, g, b}, opacity)
-  // if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
+  if (OPTIONS.type === "adorablecss" || OPTIONS.type === "figmaDSL") return makeAdorableStyleColor({r, g, b}, opacity)
+  if (OPTIONS.type === "tailwindcss") return makeTailwindStyleColor({r, g, b}, opacity)
   return makeTailwindStyleColor({r, g, b}, opacity)
 }
 
@@ -102,6 +101,8 @@ export const stripZero = (value: string) =>
 
 export const unitValue = ({value, unit}): string => {
   value = stripZero("" + makeNumber(value))
+  if (value === "0") return ""
+
   switch (unit) {
     case "PIXELS": {
       return px(value)
