@@ -1,0 +1,12 @@
+:where(*) {box-sizing: border-box; outline: none;}
+:root {
+  word-break: break-word;
+}
+
+*[contenteditable]:hover {
+  outline: 1px solid red;
+}
+
+*[contenteditable]:focus {
+  outline: 1px solid #4f80ff;
+}

@@ -116,7 +116,7 @@ const generateStyle = (node: SceneNode) => {
 }
 
 //
-const camelCase = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "").replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+const camelCase = (str: string) => str.replace(/\s/g, "").replace(/[-_/]([a-z])/g, (_, letter) => letter.toUpperCase())
 const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
 
 const generateCode = (node: SceneNode) => {
@@ -178,14 +178,11 @@ const generateCode = (node: SceneNode) => {
 
 export const getGeneratedCode = (node: SceneNode) => {
   const [code, types] = generateCode(node)
-
   return `
-function _(createFigmaDSL, ...props) {
-  const {${Array.from(types).join(", ")}} = createFigmaDSL(props)
-  return (
+function _($) {return function (...props) {const {${Array.from(types).join(", ")}} = $(props); return (
 
 ${code}
-  )
-}
+
+)}}
 `.trim()
 }

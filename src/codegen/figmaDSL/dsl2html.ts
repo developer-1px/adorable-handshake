@@ -12,6 +12,6 @@ export function dsl2html(code: string) {
       }
     )
 
-  const s = new Function("return " + code)
-  return s()(createComponents)
+  const s = new Function("return " + code)()
+  return s(createComponents)()
 }
